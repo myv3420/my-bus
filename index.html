@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#1e1c2e">
-    <title>バス時刻表(お天気レスキュー版)</title>
+    <title>バス時刻表(完全版)</title>
     <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -17,7 +17,6 @@
         body { font-family: 'Zen Maru Gothic', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 10px; padding-bottom: 140px; scroll-behavior: smooth; }
         .card { background: var(--surface); border-radius: 20px; padding: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); text-align: center; position: sticky; top: 10px; z-index: 100; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 20px; }
         
-        /* 🌤 天気エリア & 更新ボタン */
         .weather-area { font-size: 0.8rem; margin-bottom: 12px; display: flex; flex-direction: column; align-items: center; position: relative; }
         .temp-now { font-size: 1.3rem; font-weight: bold; display: flex; align-items: center; gap: 8px; color: var(--highlight); }
         .temp-sub { font-size: 0.75rem; display: flex; gap: 12px; font-weight: bold; margin-top: 4px; }
@@ -27,32 +26,29 @@
         .label-lo { color: var(--low-temp); }
         .rain-chance { color: var(--text); opacity: 0.6; }
 
-        /* 更新ボタン 🔄 */
-        .refresh-btn {
-            display: inline-flex; align-items: center; justify-content: center;
-            width: 28px; height: 28px; margin-left: 8px;
-            background: rgba(255,255,255,0.08); border: none; border-radius: 50%;
-            color: var(--accent); font-size: 0.9rem; cursor: pointer; transition: 0.3s;
-        }
-        .refresh-btn:active { background: rgba(255,255,255,0.2); transform: scale(0.9); }
+        .refresh-btn { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; margin-left: 8px; background: rgba(255,255,255,0.08); border: none; border-radius: 50%; color: var(--accent); font-size: 0.9rem; cursor: pointer; transition: 0.3s; }
         @keyframes spin { 100% { transform: rotate(360deg); } }
         .spinning { animation: spin 0.8s linear infinite; }
 
-        /* バス時刻表スタイル */
         .station-container { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 10px; }
         .station-name { font-size: 1.1rem; font-weight: bold; color: var(--accent); }
         .station-name.editing { color: #ff4757; }
         .edit-gear { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--accent); border-radius: 50%; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; cursor: pointer; }
-        .edit-gear.active { background: #ff4757; color: white; transform: rotate(90deg); }
         .day-toggle { display: flex; background: rgba(0,0,0,0.3); border-radius: 10px; padding: 3px; margin-bottom: 10px; }
         .tgl-btn { flex: 1; border: none; background: none; color: var(--text); padding: 5px; border-radius: 8px; font-size: 0.7rem; font-weight: bold; opacity: 0.5; }
         .tgl-btn.active { background: var(--text); color: var(--bg); opacity: 1; }
+        
         .next-bus { background: rgba(201, 184, 255, 0.05); border-radius: 15px; padding: 12px; border: 1px solid var(--accent); transition: all 0.3s; }
         .next-bus.is-selected { border-color: var(--selected); background: rgba(0, 210, 255, 0.05); }
         .next-info { display: flex; justify-content: center; align-items: baseline; gap: 8px; }
         .next-time { font-size: 2.6rem; font-weight: bold; color: var(--highlight); line-height: 1; }
-        .next-route { font-size: 0.75rem; font-weight: bold; padding: 2px 6px; border-radius: 5px; }
+        
+        /* 🎨 ここを修正：文字色を黒 (#000000) に固定 */
+        .next-route { font-size: 0.75rem; font-weight: bold; padding: 2px 6px; border-radius: 5px; color: #000000; }
+        
         .countdown { font-size: 0.95rem; margin-top: 4px; font-weight: bold; }
+        .second-bus { font-size: 0.8rem; opacity: 0.8; display: flex; justify-content: center; align-items: center; gap: 5px; padding-top: 6px; border-top: 1px dashed rgba(255,255,255,0.1); margin-top: 6px; }
+
         .hour-row { display: flex; align-items: flex-start; border-bottom: 1px solid rgba(255,255,255,0.05); padding: 10px 0; scroll-margin-top: 320px; }
         .hour-label { width: 35px; font-weight: bold; color: var(--accent); font-size: 1.1rem; }
         .mins-wrap { display: flex; flex-wrap: wrap; gap: 6px; flex: 1; }
@@ -64,9 +60,12 @@
         .m-val { font-size: 1rem; font-weight: bold; }
         .m-route { font-size: 0.5rem; font-weight: bold; margin-top: -2px; }
         .add-min-btn { font-size: 0.7rem; color: var(--accent); padding: 2px 8px; border: 1px dashed var(--accent); border-radius: 6px; display: none; }
+        
         .footer-nav { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(19,18,30,0.98); padding: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; border-top: 1px solid var(--accent); padding-bottom: calc(12px + env(safe-area-inset-bottom)); z-index: 1000; }
         .btn { background: var(--surface); border: 1px solid var(--accent); color: var(--text); padding: 12px; border-radius: 12px; font-size: 0.85rem; font-weight: bold; }
         .btn.active { background: var(--accent); color: var(--bg); }
+        
+        /* リスト内の周り文字色も修正 */
         .rt-kita { color: var(--accent); }
         .rt-minami { color: var(--south); }
     </style>
@@ -91,9 +90,9 @@
         <div id="card-area" class="next-bus">
             <div class="next-info">
                 <div id="next-t" class="next-time">--:--</div>
-                <div id="next-rt" class="next-route"></div>
-            </div>
+                <div id="next-route-container"></div> </div>
             <div id="count" class="countdown">お待ちください</div>
+            <div id="second-info" class="second-bus"></div>
         </div>
     </div>
 
@@ -105,6 +104,7 @@
     </div>
 
     <script>
+        // データ部分は変更ありません
         const defaultData = { atsu: { h: [{m:41,h:6,r:"北"},{m:43,h:6,r:"北"},{m:57,h:6,r:"北"},{m:33,h:6,r:"南"},{m:35,h:6,r:"南"},{m:49,h:6,r:"南"},{m:55,h:6,r:"南"},{m:3,h:7,r:"北"},{m:17,h:7,r:"北"},{m:27,h:7,r:"北"},{m:29,h:7,r:"北"},{m:35,h:7,r:"北"},{m:43,h:7,r:"北"},{m:57,h:7,r:"北"},{m:19,h:7,r:"南"},{m:35,h:7,r:"南"},{m:49,h:7,r:"南"},{m:11,h:8,r:"北"},{m:25,h:8,r:"北"},{m:37,h:8,r:"北"},{m:3,h:8,r:"南"},{m:17,h:8,r:"南"},{m:11,h:9,r:"北"},{m:27,h:9,r:"北"},{m:6,h:10,r:"北"},{m:47,h:10,r:"北"},{m:57,h:11,r:"北"},{m:47,h:12,r:"北"},{m:24,h:13,r:"北"},{m:5,h:14,r:"北"},{m:44,h:14,r:"北"},{m:57,h:14,r:"北"},{m:17,h:15,r:"北"},{m:44,h:15,r:"北"},{m:59,h:15,r:"北"},{m:59,h:15,r:"南"},{m:9,h:16,r:"南"},{m:19,h:16,r:"南"},{m:31,h:16,r:"南"},{m:47,h:16,r:"南"},{m:54,h:16,r:"南"},{m:9,h:17,r:"南"},{m:13,h:17,r:"南"},{m:20,h:17,r:"南"},{m:36,h:17,r:"南"},{m:44,h:17,r:"南"},{m:4,h:18,r:"南"},{m:24,h:18,r:"南"},{m:39,h:18,r:"南"},{m:54,h:18,r:"南"},{m:26,h:19,r:"北"},{m:42,h:19,r:"北"},{m:9,h:19,r:"南"},{m:34,h:19,r:"南"},{m:15,h:20,r:"北"},{m:4,h:20,r:"南"},{m:29,h:20,r:"南"},{m:1,h:21,r:"南"},{m:14,h:21,r:"南"},{m:44,h:21,r:"南"},{m:57,h:21,r:"南"},{m:19,h:22,r:"南"}], k: [{m:41,h:6,r:"北"},{m:33,h:6,r:"南"},{m:49,h:6,r:"南"},{m:6,h:7,r:"北"},{m:20,h:7,r:"南"},{m:34,h:7,r:"南"},{m:48,h:7,r:"南"},{m:1,h:8,r:"南"},{m:23,h:8,r:"南"},{m:12,h:9,r:"北"},{m:39,h:9,r:"北"},{m:57,h:9,r:"北"},{m:42,h:10,r:"北"},{m:24,h:11,r:"北"},{m:6,h:12,r:"北"},{m:34,h:12,r:"南"},{m:57,h:13,r:"北"},{m:9,h:13,r:"南"},{m:49,h:13,r:"南"},{m:30,h:14,r:"南"},{m:7,h:15,r:"北"},{m:42,h:15,r:"北"},{m:15,h:16,r:"北"},{m:37,h:16,r:"北"},{m:2,h:17,r:"北"},{m:25,h:17,r:"北"},{m:47,h:17,r:"北"},{m:7,h:18,r:"北"},{m:42,h:18,r:"北"},{m:58,h:18,r:"北"},{m:12,h:19,r:"北"},{m:37,h:19,r:"北"},{m:2,h:20,r:"北"},{m:14,h:20,r:"北"},{m:38,h:20,r:"南"},{m:43,h:21,r:"北"},{m:1,h:21,r:"南"},{m:1,h:22,r:"北"},{m:22,h:22,r:"北"}] }, wada: { h: [{m:14,h:6,r:"北"},{m:16,h:6,r:"北"},{m:30,h:6,r:"北"},{m:36,h:6,r:"北"},{m:50,h:6,r:"北"},{m:14,h:6,r:"南"},{m:16,h:6,r:"南"},{m:30,h:6,r:"南"},{m:36,h:6,r:"南"},{m:0,h:7,r:"北"},{m:2,h:7,r:"北"},{m:8,h:7,r:"北"},{m:16,h:7,r:"北"},{m:30,h:7,r:"北"},{m:44,h:7,r:"北"},{m:58,h:7,r:"北"},{m:0,h:7,r:"南"},{m:16,h:7,r:"南"},{m:30,h:7,r:"南"},{m:44,h:7,r:"南"},{m:58,h:7,r:"南"},{m:10,h:8,r:"北"},{m:35,h:8,r:"北"},{m:51,h:8,r:"北"},{m:30,h:9,r:"北"},{m:11,h:10,r:"北"},{m:30,h:11,r:"北"},{m:20,h:12,r:"北"},{m:48,h:12,r:"北"},{m:38,h:13,r:"北"},{m:8,h:14,r:"北"},{m:30,h:14,r:"北"},{m:50,h:14,r:"北"},{m:17,h:15,r:"北"},{m:32,h:15,r:"北"},{m:40,h:15,r:"南"},{m:50,h:15,r:"南"},{m:0,h:16,r:"南"},{m:12,h:16,r:"南"},{m:28,h:16,r:"南"},{m:35,h:16,r:"南"},{m:50,h:16,r:"南"},{m:54,h:16,r:"南"},{m:1,h:17,r:"南"},{m:17,h:17,r:"南"},{m:25,h:17,r:"南"},{m:45,h:17,r:"南"},{m:59,h:18,r:"北"},{m:5,h:18,r:"南"},{m:20,h:18,r:"南"},{m:35,h:18,r:"南"},{m:50,h:18,r:"南"},{m:15,h:19,r:"北"},{m:48,h:19,r:"北"},{m:15,h:19,r:"南"},{m:45,h:19,r:"南"},{m:10,h:20,r:"南"},{m:42,h:20,r:"南"},{m:55,h:20,r:"南"},{m:25,h:21,r:"南"},{m:38,h:21,r:"南"},{m:0,h:22,r:"南"}], k: [{m:14,h:6,r:"北"},{m:39,h:6,r:"北"},{m:14,h:6,r:"南"},{m:30,h:6,r:"南"},{m:1,h:7,r:"南"},{m:15,h:7,r:"南"},{m:29,h:7,r:"南"},{m:42,h:7,r:"南"},{m:45,h:8,r:"北"},{m:4,h:8,r:"南"},{m:12,h:9,r:"北"},{m:30,h:9,r:"北"},{m:6,h:10,r:"北"},{m:48,h:10,r:"北"},{m:30,h:11,r:"北"},{m:15,h:12,r:"南"},{m:50,h:12,r:"南"},{m:30,h:13,r:"北"},{m:30,h:13,r:"南"},{m:40,h:14,r:"北"},{m:11,h:14,r:"南"},{m:15,h:15,r:"北"},{m:48,h:15,r:"北"},{m:10,h:16,r:"北"},{m:35,h:16,r:"北"},{m:58,h:16,r:"北"},{m:20,h:17,r:"北"},{m:40,h:17,r:"北"},{m:15,h:18,r:"北"},{m:31,h:18,r:"北"},{m:45,h:18,r:"北"},{m:10,h:19,r:"北"},{m:35,h:19,r:"北"},{m:47,h:19,r:"北"},{m:19,h:20,r:"南"},{m:42,h:20,r:"南"},{m:16,h:21,r:"北"},{m:34,h:21,r:"北"},{m:55,h:21,r:"北"}] } };
         let db = JSON.parse(localStorage.getItem('bus_db_v2') || JSON.stringify(defaultData));
         let currentSt = 'atsu';
@@ -121,7 +121,6 @@
                 const dataJP = await resJP.json();
                 const resCur = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=35.53&longitude=139.70&current_weather=true&timezone=Asia%2FTokyo`);
                 const dataCur = await resCur.json();
-
                 const today = dataJP.forecasts[0];
                 const tomorrow = dataJP.forecasts[1];
                 const nowH = new Date().getHours();
@@ -131,12 +130,9 @@
                 else if(nowH < 12) rainProb = rainObj.T06_12;
                 else if(nowH < 18) rainProb = rainObj.T12_18;
                 else rainProb = rainObj.T18_24;
-
                 const curTemp = Math.round(dataCur.current_weather.temperature);
-                // 今日の値がなければ明日の値を採用
                 const maxT = today.temperature.max.celsius || tomorrow.temperature.max.celsius || "--";
                 const minT = today.temperature.min.celsius || tomorrow.temperature.min.celsius || "--";
-
                 document.getElementById('weather-info').innerHTML = `
                     <div class="temp-now">
                         <img src="${today.image.url}" class="weather-icon">
@@ -166,6 +162,7 @@
             const list = db[currentSt][dayMode].sort((a,b) => (a.h * 60 + a.m) - (b.h * 60 + b.m));
             const futures = list.filter(item => (item.h > h) || (item.h === h && item.m > m));
             const next = futures[0] || null;
+            const second = futures[1] || null;
             const listDiv = document.getElementById('list');
             listDiv.innerHTML = '';
             let targetRow = null;
@@ -203,20 +200,29 @@
             const cardArea = document.getElementById('card-area');
             cardArea.classList.toggle('is-selected', !!selectedBus);
             const nextT = document.getElementById('next-t');
-            const nextRt = document.getElementById('next-rt');
+            const routeContainer = document.getElementById('next-route-container'); // ラベル用コンテナ
             const count = document.getElementById('count');
+            const secondInfo = document.getElementById('second-info');
+            
             if (displayBus) {
                 nextT.innerText = `${displayBus.h}:${displayBus.m.toString().padStart(2,'0')}`;
-                nextRt.innerText = `${displayBus.r}周り${selectedBus ? ' (選)' : ''}`;
-                nextRt.style.background = displayBus.r === '北' ? 'var(--accent)' : 'var(--south)';
-                nextRt.style.color = 'var(--bg)';
+                
+                // 🎨 JavaScriptでラベルを生成して黒文字にする
+                const labelColor = displayBus.r === '北' ? 'var(--accent)' : 'var(--south)';
+                const selectedText = selectedBus ? ' (選)' : '';
+                routeContainer.innerHTML = `<span class="next-route" style="background:${labelColor};">${displayBus.r}周り${selectedText}</span>`;
+
                 const diff = Math.ceil((new Date().setHours(displayBus.h, displayBus.m, 0) - now) / 60000);
                 count.innerText = `あと ${diff} 分`;
                 count.style.color = diff <= 5 ? "var(--south)" : (selectedBus ? "var(--selected)" : "var(--text)");
+                if (second && !selectedBus) {
+                    secondInfo.innerText = `次は ${second.h}:${second.m.toString().padStart(2,'0')} (${second.r})`;
+                    secondInfo.style.display = 'flex';
+                } else { secondInfo.style.display = 'none'; }
                 if (!initialScrollDone && targetRow) {
                     setTimeout(() => { targetRow.scrollIntoView({ behavior: 'smooth', block: 'start' }); initialScrollDone = true; }, 300);
                 }
-            } else { nextT.innerText = "--:--"; nextRt.innerText = ""; count.innerText = "運行終了"; }
+            } else { nextT.innerText = "--:--"; routeContainer.innerHTML = ""; count.innerText = "運行終了"; secondInfo.style.display = 'none'; }
         }
         function toggleEditMode() { isEditMode = !isEditMode; if (isEditMode) selectedBus = null; update(); if (!isEditMode) localStorage.setItem('bus_db_v2', JSON.stringify(db)); }
         function selectBus(bus) { selectedBus = (selectedBus && selectedBus.h === bus.h && selectedBus.m === bus.m && selectedBus.r === bus.r) ? null : bus; update(); }
