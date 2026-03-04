@@ -45,7 +45,6 @@
         .next-info { display: flex; justify-content: center; align-items: baseline; gap: 8px; }
         .next-time { font-size: 2.6rem; font-weight: bold; color: var(--highlight); line-height: 1; }
         
-        /* ラベルは黒文字で見やすく！ */
         .next-route { font-size: 0.75rem; font-weight: bold; padding: 2px 6px; border-radius: 5px; color: #000000; }
         
         .countdown { font-size: 0.95rem; margin-top: 4px; font-weight: bold; }
@@ -114,14 +113,25 @@
                 const dataJP = await resJP.json();
                 const resCur = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=35.53&longitude=139.70&current_weather=true&timezone=Asia%2FTokyo`);
                 const dataCur = await resCur.json();
+                
                 const today = dataJP.forecasts[0];
+                const tomorrow = dataJP.forecasts[1];
                 const nowH = new Date().getHours();
+                
                 let rainProb = "--";
                 const rainObj = today.chanceOfRain;
-                if(nowH < 6) rainProb = rainObj.T00_06; else if(nowH < 12) rainProb = rainObj.T06_12; else if(nowH < 18) rainProb = rainObj.T12_18; else rainProb = rainObj.T18_24;
+                if(nowH < 6) rainProb = rainObj.T00_06;
+                else if(nowH < 12) rainProb = rainObj.T06_12;
+                else if(nowH < 18) rainProb = rainObj.T12_18;
+                else rainProb = rainObj.T18_24;
+                
+                // 夜間対応：今日のデータが空なら明日の午前を表示
+                if (rainProb === "--" || !rainProb) rainProb = tomorrow.chanceOfRain.T06_12;
+
                 const curTemp = Math.round(dataCur.current_weather.temperature);
-                const maxT = today.temperature.max.celsius || "--";
-                const minT = today.temperature.min.celsius || "--";
+                const maxT = today.temperature.max.celsius || tomorrow.temperature.max.celsius || "--";
+                const minT = today.temperature.min.celsius || tomorrow.temperature.min.celsius || "--";
+                
                 document.getElementById('weather-info').innerHTML = `
                     <div class="temp-now">
                         <img src="${today.image.url}" class="weather-icon">
