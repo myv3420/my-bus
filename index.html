@@ -3,9 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    
     <link rel="apple-touch-icon" href="icon.png">
-    
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#1e1c2e">
     <title>バス時刻表(最強版)</title>
@@ -20,7 +18,6 @@
         body { font-family: 'Zen Maru Gothic', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 10px; padding-bottom: 140px; scroll-behavior: smooth; }
         .card { background: var(--surface); border-radius: 20px; padding: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); text-align: center; position: sticky; top: 10px; z-index: 100; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 20px; }
         
-        /* お天気エリア */
         .weather-area { font-size: 0.8rem; margin-bottom: 12px; display: flex; flex-direction: column; align-items: center; position: relative; }
         .temp-now { font-size: 1.3rem; font-weight: bold; display: flex; align-items: center; gap: 8px; color: var(--highlight); }
         .temp-sub { font-size: 0.75rem; display: flex; gap: 12px; font-weight: bold; margin-top: 4px; }
@@ -32,7 +29,6 @@
         @keyframes spin { 100% { transform: rotate(360deg); } }
         .spinning { animation: spin 0.8s linear infinite; }
 
-        /* バス停・切り替え */
         .station-container { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 10px; }
         .station-name { font-size: 1.1rem; font-weight: bold; color: var(--accent); }
         .station-name.editing { color: #ff4757; }
@@ -41,16 +37,18 @@
         .tgl-btn { flex: 1; border: none; background: none; color: var(--text); padding: 5px; border-radius: 8px; font-size: 0.7rem; font-weight: bold; opacity: 0.5; }
         .tgl-btn.active { background: var(--text); color: var(--bg); opacity: 1; }
         
-        /* 次のバス表示 */
         .next-bus { background: rgba(201, 184, 255, 0.05); border-radius: 15px; padding: 12px; border: 1px solid var(--accent); transition: all 0.3s; }
         .next-bus.is-selected { border-color: var(--selected); background: rgba(0, 210, 255, 0.05); }
-        .next-info { display: flex; justify-content: center; align-items: baseline; gap: 8px; }
+        .next-info { display: flex; justify-content: center; align-items: center; gap: 8px; }
         .next-time { font-size: 2.6rem; font-weight: bold; color: var(--highlight); line-height: 1; }
-        .next-route { font-size: 0.75rem; font-weight: bold; padding: 2px 6px; border-radius: 5px; color: #000000; }
+        
+        /* ラベル表示を並べるためのコンテナ */
+        #next-route-container { display: flex; flex-direction: column; gap: 2px; }
+        .next-route { font-size: 0.7rem; font-weight: bold; padding: 1px 4px; border-radius: 4px; color: #000000; white-space: nowrap; }
+        
         .countdown { font-size: 0.95rem; margin-top: 4px; font-weight: bold; }
         .second-bus { font-size: 0.8rem; opacity: 0.8; display: flex; justify-content: center; align-items: center; gap: 5px; padding-top: 6px; border-top: 1px dashed rgba(255,255,255,0.1); margin-top: 6px; }
 
-        /* リスト表示 */
         .hour-row { display: flex; align-items: flex-start; border-bottom: 1px solid rgba(255,255,255,0.05); padding: 10px 0; scroll-margin-top: 320px; }
         .hour-label { width: 35px; font-weight: bold; color: var(--accent); font-size: 1.1rem; }
         .mins-wrap { display: flex; flex-wrap: wrap; gap: 6px; flex: 1; }
@@ -119,22 +117,16 @@
                 const today = dataJP.forecasts[0];
                 const tomorrow = dataJP.forecasts[1];
                 const nowH = new Date().getHours();
-                
                 let rainProb = "--";
                 const rainObj = today.chanceOfRain;
                 if(nowH < 6) rainProb = rainObj.T00_06;
                 else if(nowH < 12) rainProb = rainObj.T06_12;
                 else if(nowH < 18) rainProb = rainObj.T12_18;
                 else rainProb = rainObj.T18_24;
-                
-                // 夜間・早朝対応：今日の降水確率が空なら明日の午前中を表示
                 if (rainProb === "--" || !rainProb) rainProb = tomorrow.chanceOfRain.T06_12;
-
                 const curTemp = Math.round(dataCur.current_weather.temperature);
-                // 今日がなければ明日を表示
                 const maxT = today.temperature.max.celsius || tomorrow.temperature.max.celsius || "--";
                 const minT = today.temperature.min.celsius || tomorrow.temperature.min.celsius || "--";
-                
                 document.getElementById('weather-info').innerHTML = `
                     <div class="temp-now">
                         <img src="${today.image.url}" class="weather-icon">
@@ -164,7 +156,13 @@
             const list = db[currentSt][dayMode].sort((a,b) => (a.h * 60 + a.m) - (b.h * 60 + b.m));
             const futures = list.filter(item => (item.h > h) || (item.h === h && item.m > m));
             const next = futures[0] || null;
-            const second = futures[1] || null;
+            
+            // 💡 次の次のバスを探す（同じ時間のバスは飛ばす）
+            let second = null;
+            if (next) {
+                second = futures.find(item => (item.h * 60 + item.m) > (next.h * 60 + next.m));
+            }
+
             const listDiv = document.getElementById('list');
             listDiv.innerHTML = '';
             let targetRow = null;
@@ -205,9 +203,20 @@
             
             if (displayBus) {
                 document.getElementById('next-t').innerText = `${displayBus.h}:${displayBus.m.toString().padStart(2,'0')}`;
-                const labelColor = displayBus.r === '北' ? 'var(--accent)' : 'var(--south)';
-                const selectedText = selectedBus ? ' (選)' : '';
-                document.getElementById('next-route-container').innerHTML = `<span class="next-route" style="background:${labelColor};">${displayBus.r}周り${selectedText}</span>`;
+                
+                // 💡 ここで同じ時間のバスを全部抽出してラベルにする
+                let routesHTML = "";
+                if (selectedBus) {
+                    const color = displayBus.r === '北' ? 'var(--accent)' : 'var(--south)';
+                    routesHTML = `<span class="next-route" style="background:${color};">${displayBus.r}周り (選)</span>`;
+                } else {
+                    const sameTimeBuses = list.filter(b => b.h === displayBus.h && b.m === displayBus.m);
+                    routesHTML = sameTimeBuses.map(b => {
+                        const color = b.r === '北' ? 'var(--accent)' : 'var(--south)';
+                        return `<span class="next-route" style="background:${color};">${b.r}周り</span>`;
+                    }).join('');
+                }
+                document.getElementById('next-route-container').innerHTML = routesHTML;
 
                 const diff = Math.ceil((new Date().setHours(displayBus.h, displayBus.m, 0) - now) / 60000);
                 const count = document.getElementById('count');
