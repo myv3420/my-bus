@@ -795,6 +795,12 @@ function showToast(msg, type = '') {
 // ==================== 起動 ====================
 checkHoliday();
 setInterval(update, 10000);
+
+// ==================== Service Worker登録 ====================
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js')
+        .catch(err => console.log('SW登録失敗:', err));
+}
 </script>
 </body>
 </html>
