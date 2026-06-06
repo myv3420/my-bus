@@ -3,383 +3,798 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <link rel="apple-touch-icon" href="icon.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#1e1c2e">
-    <title>バス時刻表(完全復活版)</title>
-    <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;700&display=swap" rel="stylesheet">
+    <title>バス時刻表</title>
     <style>
         :root {
-            --bg: #13121e; --surface: #1e1c2e; --text: #e2dff5;
-            --accent: #c9b8ff; --highlight: #ffe090; --south: #f0889e;
-            --now-circle: #ff9f43; --selected: #00d2ff;
-            --high-temp: #ff6b6b; --low-temp: #48dbfb;
+            --bg: #13121e;
+            --surface: #1e1c2e;
+            --surface2: #252338;
+            --text: #e2dff5;
+            --accent: #c9b8ff;
+            --highlight: #ffe090;
+            --south: #f0889e;
+            --now-circle: #ff9f43;
+            --selected: #00d2ff;
         }
-        body { font-family: 'Zen Maru Gothic', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 10px; padding-bottom: 140px; scroll-behavior: smooth; }
-        .card { background: var(--surface); border-radius: 20px; padding: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); text-align: center; position: sticky; top: 10px; z-index: 100; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 20px; }
-        
-        .weather-area { font-size: 0.8rem; margin-bottom: 12px; display: flex; flex-direction: column; align-items: center; position: relative; }
-        .temp-now { font-size: 1.3rem; font-weight: bold; display: flex; align-items: center; gap: 8px; color: var(--highlight); }
-        .temp-sub { font-size: 0.75rem; display: flex; gap: 12px; font-weight: bold; margin-top: 4px; }
-        .weather-icon { width: 32px; height: 24px; object-fit: contain; }
-        .label-hi { color: var(--high-temp); }
-        .label-lo { color: var(--low-temp); }
-        .rain-chance { color: var(--text); opacity: 0.6; }
-        .refresh-btn { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; margin-left: 8px; background: rgba(255,255,255,0.08); border: none; border-radius: 50%; color: var(--accent); font-size: 0.9rem; cursor: pointer; transition: 0.3s; }
-        
-        /* くるくるアニメーション */
-        @keyframes spin { 100% { transform: rotate(360deg); } }
-        .spinning { animation: spin 0.8s linear infinite; }
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Hiragino Maru Gothic ProN', 'Hiragino Sans', 'BIZ UDPGothic', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 10px;
+            padding-bottom: calc(90px + env(safe-area-inset-bottom));
+            scroll-behavior: smooth;
+        }
 
-        .station-container { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 6px; }
-        .station-name { font-size: 1.1rem; font-weight: bold; color: var(--accent); }
-        .station-name.editing { color: #ff4757; }
-        .edit-gear { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--accent); border-radius: 50%; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; cursor: pointer; }
-        
-        .day-info-badge { font-size: 0.7rem; color: var(--highlight); margin-bottom: 8px; font-weight: bold; }
-        .day-toggle { display: flex; background: rgba(0,0,0,0.3); border-radius: 10px; padding: 3px; margin-bottom: 10px; }
-        .tgl-btn { flex: 1; border: none; background: none; color: var(--text); padding: 5px; border-radius: 8px; font-size: 0.7rem; font-weight: bold; opacity: 0.5; }
+        /* ── トップカード ── */
+        .card {
+            background: var(--surface);
+            border-radius: 20px;
+            padding: 15px;
+            text-align: center;
+            position: sticky;
+            top: 10px;
+            z-index: 100;
+            border: 1px solid rgba(255,255,255,0.08);
+            margin-bottom: 16px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+        }
+
+        /* 停留所名 */
+        .station-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+        .station-name {
+            font-size: 1.15rem;
+            font-weight: bold;
+            color: var(--accent);
+        }
+        .edit-gear {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: var(--accent);
+            border-radius: 50%;
+            width: 28px; height: 28px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.85rem;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        .edit-gear.active { background: rgba(255,75,87,0.2); border-color: #ff4757; color: #ff4757; }
+
+        /* 日付バッジ */
+        .day-badge {
+            font-size: 0.72rem;
+            font-weight: bold;
+            color: var(--highlight);
+            margin-bottom: 8px;
+        }
+
+        /* 平日／休日トグル */
+        .day-toggle {
+            display: flex;
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+            padding: 3px;
+            margin-bottom: 12px;
+        }
+        .tgl-btn {
+            flex: 1;
+            border: none;
+            background: none;
+            color: var(--text);
+            padding: 7px;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 0.78rem;
+            opacity: 0.5;
+            cursor: pointer;
+            font-family: inherit;
+        }
         .tgl-btn.active { background: var(--text); color: var(--bg); opacity: 1; }
-        
-        .next-bus { background: rgba(201, 184, 255, 0.05); border-radius: 15px; padding: 12px; border: 1px solid var(--accent); transition: all 0.3s; }
-        .next-bus.is-selected { border-color: var(--selected); background: rgba(0, 210, 255, 0.05); }
-        .next-info { display: flex; justify-content: center; align-items: center; gap: 8px; }
-        .next-time { font-size: 2.6rem; font-weight: bold; color: var(--highlight); line-height: 1; }
-        
-        #next-route-container { display: flex; flex-direction: column; gap: 2px; }
-        .next-route { font-size: 0.7rem; font-weight: bold; padding: 1px 4px; border-radius: 4px; color: #000000; white-space: nowrap; }
-        
-        .countdown { font-size: 0.95rem; margin-top: 4px; font-weight: bold; }
-        .second-bus { font-size: 0.8rem; opacity: 0.8; display: flex; justify-content: center; align-items: center; gap: 5px; padding-top: 6px; border-top: 1px dashed rgba(255,255,255,0.1); margin-top: 6px; }
 
-        .hour-row { display: flex; align-items: flex-start; border-bottom: 1px solid rgba(255,255,255,0.05); padding: 10px 0; scroll-margin-top: 360px; }
-        .hour-label { width: 35px; font-weight: bold; color: var(--accent); font-size: 1.1rem; }
-        .mins-wrap { display: flex; flex-wrap: wrap; gap: 6px; flex: 1; }
-        .min-box { position: relative; display: flex; flex-direction: column; align-items: center; min-width: 32px; opacity: 0.3; padding: 2px; border-radius: 8px; border: 2px solid transparent; cursor: pointer; }
+        /* 次のバスエリア */
+        .next-area {
+            background: rgba(201,184,255,0.04);
+            border: 1px solid var(--accent);
+            border-radius: 14px;
+            padding: 12px 14px;
+            transition: border-color 0.3s, background 0.3s;
+        }
+        .next-area.is-selected {
+            border-color: var(--selected);
+            background: rgba(0,210,255,0.05);
+        }
+        .next-main {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+        }
+        .next-time {
+            font-size: 2.8rem;
+            font-weight: bold;
+            color: var(--highlight);
+            line-height: 1;
+        }
+        .next-routes {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+        .route-badge {
+            font-size: 0.68rem;
+            font-weight: bold;
+            padding: 2px 6px;
+            border-radius: 5px;
+            color: #000;
+            white-space: nowrap;
+        }
+        .countdown {
+            font-size: 0.95rem;
+            font-weight: bold;
+            margin-top: 6px;
+            color: var(--text);
+        }
+        .second-bus {
+            font-size: 0.78rem;
+            opacity: 0.7;
+            margin-top: 6px;
+            padding-top: 6px;
+            border-top: 1px dashed rgba(255,255,255,0.1);
+            display: none;
+        }
+
+        /* ── 時刻表リスト ── */
+        .hour-row {
+            display: flex;
+            align-items: flex-start;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            padding: 10px 0;
+            scroll-margin-top: 220px;
+        }
+        .hour-label {
+            width: 36px;
+            font-weight: bold;
+            color: var(--accent);
+            font-size: 1.1rem;
+            flex-shrink: 0;
+        }
+        .mins-wrap {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            flex: 1;
+        }
+        .min-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 34px;
+            padding: 4px 3px;
+            border-radius: 8px;
+            border: 2px solid transparent;
+            opacity: 0.3;
+            cursor: pointer;
+            transition: transform 0.15s, opacity 0.15s;
+        }
         .min-box.active { opacity: 1; }
-        .min-box.next-highlight { border-color: var(--now-circle); background: rgba(255, 159, 67, 0.1); }
-        .min-box.selected-bus { border-color: var(--selected) !important; background: rgba(0, 210, 255, 0.2) !important; transform: scale(1.1); z-index: 10; opacity: 1; }
-        .min-box.editable::after { content: '×'; position: absolute; top: -5px; right: -5px; background: #ff4757; color: white; width: 14px; height: 14px; border-radius: 50%; font-size: 10px; display: flex; align-items: center; justify-content: center; }
+        .min-box.next-hl {
+            border-color: var(--now-circle);
+            background: rgba(255,159,67,0.1);
+        }
+        .min-box.sel {
+            border-color: var(--selected) !important;
+            background: rgba(0,210,255,0.2) !important;
+            transform: scale(1.12);
+            opacity: 1;
+            z-index: 5;
+        }
+        .min-box.editable { position: relative; }
+        .min-box.editable::after {
+            content: '×';
+            position: absolute;
+            top: -5px; right: -5px;
+            background: #ff4757;
+            color: #fff;
+            width: 14px; height: 14px;
+            border-radius: 50%;
+            font-size: 9px;
+            display: flex; align-items: center; justify-content: center;
+        }
         .m-val { font-size: 1rem; font-weight: bold; }
-        .m-route { font-size: 0.5rem; font-weight: bold; margin-top: -2px; }
-        .rt-kita { color: var(--accent); }
-        .rt-minami { color: var(--south); }
-        .add-min-btn { font-size: 0.7rem; color: var(--accent); padding: 2px 8px; border: 1px dashed var(--accent); border-radius: 6px; margin-top: 5px; }
-        
-        .footer-nav { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(19,18,30,0.98); padding: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; border-top: 1px solid var(--accent); padding-bottom: calc(12px + env(safe-area-inset-bottom)); z-index: 1000; }
-        .btn { background: var(--surface); border: 1px solid var(--accent); color: var(--text); padding: 12px; border-radius: 12px; font-size: 0.85rem; font-weight: bold; }
-        .btn.active { background: var(--accent); color: var(--bg); }
+        .m-route { font-size: 0.52rem; font-weight: bold; margin-top: -2px; }
+        .rt-kita .m-val, .rt-kita .m-route { color: var(--accent); }
+        .rt-minami .m-val, .rt-minami .m-route { color: var(--south); }
+        .add-btn {
+            font-size: 0.72rem;
+            color: var(--accent);
+            padding: 3px 10px;
+            border: 1px dashed var(--accent);
+            border-radius: 6px;
+            cursor: pointer;
+            align-self: center;
+        }
+
+        /* ── 設定ドロワー ── */
+        .drawer-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.55);
+            z-index: 300;
+        }
+        .drawer-overlay.open { display: block; }
+        .drawer {
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            background: var(--surface);
+            border-radius: 24px 24px 0 0;
+            padding: 20px 16px calc(24px + env(safe-area-inset-bottom));
+            z-index: 400;
+            transform: translateY(100%);
+            transition: transform 0.3s cubic-bezier(0.32,0.72,0,1);
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+        .drawer.open { transform: translateY(0); }
+        .drawer-handle {
+            width: 40px; height: 4px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 2px;
+            margin: 0 auto 18px;
+        }
+        .drawer-title {
+            font-size: 0.8rem;
+            font-weight: bold;
+            color: rgba(255,255,255,0.4);
+            letter-spacing: 0.08em;
+            margin-bottom: 14px;
+        }
+        .drawer-section {
+            background: var(--surface2);
+            border-radius: 14px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+        .drawer-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 15px 16px;
+            cursor: pointer;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            transition: background 0.15s;
+        }
+        .drawer-item:last-child { border-bottom: none; }
+        .drawer-item:active { background: rgba(255,255,255,0.06); }
+        .drawer-item.danger { color: #ff6b6b; }
+        .drawer-icon { font-size: 1.1rem; width: 24px; text-align: center; flex-shrink: 0; }
+        .drawer-label { font-size: 0.9rem; font-weight: bold; flex: 1; }
+        .drawer-sub { font-size: 0.7rem; opacity: 0.5; }
+
+        /* トースト */
+        .toast {
+            position: fixed;
+            top: 20px; left: 50%;
+            transform: translateX(-50%) translateY(-80px);
+            background: var(--surface2);
+            color: var(--text);
+            padding: 10px 20px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            z-index: 999;
+            transition: transform 0.3s ease;
+            border: 1px solid rgba(255,255,255,0.1);
+            white-space: nowrap;
+            pointer-events: none;
+        }
+        .toast.show { transform: translateX(-50%) translateY(0); }
+        .toast.ok { border-color: rgba(126,255,178,0.4); color: #7effb2; }
+        .toast.ng { border-color: rgba(255,107,107,0.4); color: #ff6b6b; }
+
+        /* ── フッターナビ ── */
+        .footer-nav {
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            background: rgba(19,18,30,0.97);
+            padding: 10px;
+            padding-bottom: calc(10px + env(safe-area-inset-bottom));
+            display: flex;
+            gap: 10px;
+            z-index: 200;
+            border-top: 1px solid rgba(255,255,255,0.08);
+        }
+        .btn {
+            flex: 1;
+            padding: 13px;
+            border-radius: 12px;
+            border: 1px solid rgba(201,184,255,0.3);
+            font-weight: bold;
+            background: var(--surface2);
+            color: var(--text);
+            font-family: inherit;
+            font-size: 0.88rem;
+            cursor: pointer;
+        }
+        .btn.active { background: var(--accent); color: var(--bg); border-color: var(--accent); }
     </style>
 </head>
 <body>
 
-    <div class="card">
-        <div class="weather-area" id="weather-info">読み込み中... 🌤</div>
-        <div class="station-container">
-            <div class="station-name" id="st-display">厚板事務所前</div>
-            <div class="edit-gear" id="edit-gear" onclick="toggleEditMode()">⚙️</div>
+<div class="card">
+    <div class="station-row">
+        <div class="station-name" id="st-display">厚板事務所前</div>
+        <div class="edit-gear" id="edit-gear" onclick="openDrawer()">⚙️</div>
+    </div>
+    <div class="day-badge" id="day-badge">判定中...</div>
+    <div class="day-toggle">
+        <button id="tgl-h" class="tgl-btn" onclick="setDayMode('h')">平日ダイヤ</button>
+        <button id="tgl-k" class="tgl-btn" onclick="setDayMode('k')">休日ダイヤ</button>
+    </div>
+    <div class="next-area" id="next-area">
+        <div class="next-main">
+            <div class="next-time" id="next-t">--:--</div>
+            <div class="next-routes" id="next-routes"></div>
         </div>
-        <div id="day-label" class="day-info-badge">判定中...</div>
-        <div class="day-toggle">
-            <button id="tgl-h" class="tgl-btn" onclick="setDayMode('h')">平日ダイヤ</button>
-            <button id="tgl-k" class="tgl-btn" onclick="setDayMode('k')">休日ダイヤ</button>
-        </div>
-        <div id="card-area" class="next-bus">
-            <div class="next-info">
-                <div id="next-t" class="next-time">--:--</div>
-                <div id="next-route-container"></div>
+        <div class="countdown" id="count">お待ちください</div>
+        <div class="second-bus" id="second-info"></div>
+    </div>
+</div>
+
+<div id="list"></div>
+
+<!-- 設定ドロワー -->
+<div class="drawer-overlay" id="drawer-overlay" onclick="closeDrawer()"></div>
+<div class="drawer" id="drawer">
+    <div class="drawer-handle"></div>
+    <div class="drawer-title">⚙️ 設定・ダイヤ管理</div>
+
+    <div class="drawer-section">
+        <div class="drawer-item" onclick="startEditMode()">
+            <div class="drawer-icon">✏️</div>
+            <div>
+                <div class="drawer-label">時刻の編集モード</div>
+                <div class="drawer-sub">時刻の追加・削除ができます</div>
             </div>
-            <div id="count" class="countdown">お待ちください</div>
-            <div id="second-info" class="second-bus"></div>
         </div>
     </div>
 
-    <div id="list"></div>
-
-    <div class="footer-nav">
-        <button id="btn-atsu" class="btn active" onclick="setStation('atsu')">厚板事務所前</button>
-        <button id="btn-wada" class="btn" onclick="setStation('wada')">渡田西門前</button>
+    <div class="drawer-section">
+        <div class="drawer-item" onclick="exportCSV()">
+            <div class="drawer-icon">📤</div>
+            <div>
+                <div class="drawer-label">CSVエクスポート</div>
+                <div class="drawer-sub">全データをCSVファイルに書き出す</div>
+            </div>
+        </div>
+        <div class="drawer-item" onclick="document.getElementById('csv-input').click()">
+            <div class="drawer-icon">📥</div>
+            <div>
+                <div class="drawer-label">CSVインポート</div>
+                <div class="drawer-sub">CSVを読み込んで時刻表を更新</div>
+            </div>
+        </div>
     </div>
 
-    <script>
-        // 📸 画像から書き換えた最新の時刻表データ（26.04.13改正版）
-        const defaultData = {
-            atsu: {
-                h: [
-                    {h:6, m:32, r:"南"}, {h:6, m:34, r:"南"}, {h:6, m:41, r:"北"}, {h:6, m:43, r:"北"}, {h:6, m:48, r:"南"}, {h:6, m:54, r:"南"}, {h:6, m:57, r:"北"},
-                    {h:7, m:3, r:"北"}, {h:7, m:17, r:"北"}, {h:7, m:18, r:"南"}, {h:7, m:27, r:"北"}, {h:7, m:29, r:"北"}, {h:7, m:34, r:"南"}, {h:7, m:35, r:"北"}, {h:7, m:43, r:"北"}, {h:7, m:48, r:"南"}, {h:7, m:57, r:"北"},
-                    {h:8, m:2, r:"南"}, {h:8, m:11, r:"北"}, {h:8, m:16, r:"南"}, {h:8, m:25, r:"北"}, {h:8, m:37, r:"北"},
-                    {h:9, m:11, r:"北"}, {h:9, m:27, r:"北"},
-                    {h:10, m:6, r:"北"}, {h:10, m:47, r:"北"},
-                    {h:11, m:57, r:"北"},
-                    {h:12, m:47, r:"北"},
-                    {h:13, m:24, r:"北"},
-                    {h:14, m:5, r:"北"}, {h:14, m:44, r:"北"}, {h:14, m:57, r:"北"},
-                    {h:15, m:17, r:"北"}, {h:15, m:44, r:"北"}, {h:15, m:58, r:"南"}, {h:15, m:59, r:"北"},
-                    {h:16, m:8, r:"南"}, {h:16, m:18, r:"南"}, {h:16, m:30, r:"南"}, {h:16, m:46, r:"南"}, {h:16, m:53, r:"南"},
-                    {h:17, m:8, r:"南"}, {h:17, m:12, r:"南"}, {h:17, m:19, r:"南"}, {h:17, m:35, r:"南"}, {h:17, m:43, r:"南"},
-                    {h:18, m:3, r:"南"}, {h:18, m:23, r:"南"}, {h:18, m:38, r:"南"}, {h:18, m:53, r:"南"},
-                    {h:19, m:8, r:"南"}, {h:19, m:26, r:"北"}, {h:19, m:33, r:"南"}, {h:19, m:47, r:"北"},
-                    {h:20, m:3, r:"南"}, {h:20, m:15, r:"北"}, {h:20, m:28, r:"南"},
-                    {h:21, m:0, r:"南"}, {h:21, m:13, r:"南"}, {h:21, m:43, r:"南"}, {h:21, m:56, r:"南"},
-                    {h:22, m:18, r:"南"}
-                ],
-                k: [
-                    {h:6, m:32, r:"南"}, {h:6, m:41, r:"北"}, {h:6, m:48, r:"南"},
-                    {h:7, m:6, r:"北"}, {h:7, m:19, r:"南"}, {h:7, m:33, r:"南"}, {h:7, m:47, r:"南"},
-                    {h:8, m:0, r:"南"}, {h:8, m:22, r:"南"},
-                    {h:9, m:12, r:"北"}, {h:9, m:39, r:"北"}, {h:9, m:57, r:"北"},
-                    {h:10, m:42, r:"北"},
-                    {h:11, m:24, r:"北"},
-                    {h:12, m:6, r:"北"}, {h:12, m:33, r:"南"},
-                    {h:13, m:8, r:"南"}, {h:13, m:48, r:"南"}, {h:13, m:57, r:"北"},
-                    {h:14, m:29, r:"南"},
-                    {h:15, m:7, r:"北"}, {h:15, m:42, r:"北"},
-                    {h:16, m:15, r:"北"}, {h:16, m:37, r:"北"},
-                    {h:17, m:2, r:"北"}, {h:17, m:25, r:"北"}, {h:17, m:47, r:"北"},
-                    {h:18, m:7, r:"北"}, {h:18, m:42, r:"北"}, {h:18, m:58, r:"北"},
-                    {h:19, m:12, r:"北"}, {h:19, m:39, r:"北"},
-                    {h:20, m:2, r:"北"}, {h:20, m:14, r:"北"}, {h:20, m:37, r:"南"},
-                    {h:21, m:0, r:"南"}, {h:21, m:43, r:"北"},
-                    {h:22, m:1, r:"北"}, {h:22, m:22, r:"北"}
-                ]
-            },
-            wada: {
-                h: [
-                    {h:6, m:14, r:"南"}, {h:6, m:14, r:"北"}, {h:6, m:16, r:"南"}, {h:6, m:16, r:"北"}, {h:6, m:30, r:"南"}, {h:6, m:30, r:"北"}, {h:6, m:36, r:"南"}, {h:6, m:36, r:"北"}, {h:6, m:50, r:"南"},
-                    {h:7, m:0, r:"南"}, {h:7, m:0, r:"北"}, {h:7, m:2, r:"北"}, {h:7, m:8, r:"北"}, {h:7, m:16, r:"南"}, {h:7, m:16, r:"北"}, {h:7, m:30, r:"南"}, {h:7, m:30, r:"北"}, {h:7, m:44, r:"南"}, {h:7, m:44, r:"北"}, {h:7, m:58, r:"南"}, {h:7, m:58, r:"北"},
-                    {h:8, m:10, r:"北"}, {h:8, m:35, r:"北"}, {h:8, m:51, r:"北"},
-                    {h:9, m:30, r:"北"},
-                    {h:10, m:11, r:"北"},
-                    {h:11, m:30, r:"北"},
-                    {h:12, m:20, r:"北"}, {h:12, m:48, r:"北"},
-                    {h:13, m:38, r:"北"},
-                    {h:14, m:8, r:"北"}, {h:14, m:30, r:"南"}, {h:14, m:50, r:"南"},
-                    {h:15, m:17, r:"北"}, {h:15, m:32, r:"北"}, {h:15, m:40, r:"南"}, {h:15, m:50, r:"南"},
-                    {h:16, m:0, r:"南"}, {h:16, m:12, r:"南"}, {h:16, m:28, r:"南"}, {h:16, m:35, r:"南"}, {h:16, m:50, r:"南"}, {h:16, m:54, r:"南"},
-                    {h:17, m:1, r:"南"}, {h:17, m:17, r:"南"}, {h:17, m:25, r:"南"}, {h:17, m:45, r:"南"},
-                    {h:18, m:5, r:"南"}, {h:18, m:20, r:"南"}, {h:18, m:35, r:"南"}, {h:18, m:50, r:"南"}, {h:18, m:59, r:"北"},
-                    {h:19, m:15, r:"南"}, {h:19, m:20, r:"北"}, {h:19, m:45, r:"南"}, {h:19, m:48, r:"北"},
-                    {h:20, m:10, r:"南"}, {h:20, m:42, r:"南"}, {h:20, m:55, r:"南"},
-                    {h:21, m:25, r:"南"}, {h:21, m:38, r:"南"},
-                    {h:22, m:0, r:"南"}
-                ],
-                k: [
-                    {h:6, m:14, r:"南"}, {h:6, m:14, r:"北"}, {h:6, m:30, r:"南"}, {h:6, m:39, r:"北"},
-                    {h:7, m:1, r:"南"}, {h:7, m:15, r:"南"}, {h:7, m:29, r:"南"}, {h:7, m:42, r:"南"},
-                    {h:8, m:4, r:"南"}, {h:8, m:45, r:"北"},
-                    {h:9, m:12, r:"北"}, {h:9, m:30, r:"北"},
-                    {h:10, m:6, r:"北"}, {h:10, m:48, r:"北"},
-                    {h:11, m:30, r:"北"},
-                    {h:12, m:15, r:"南"}, {h:12, m:50, r:"南"},
-                    {h:13, m:30, r:"南"}, {h:13, m:30, r:"北"},
-                    {h:14, m:11, r:"南"}, {h:14, m:40, r:"北"},
-                    {h:15, m:15, r:"北"}, {h:15, m:48, r:"北"},
-                    {h:16, m:10, r:"北"}, {h:16, m:35, r:"北"}, {h:16, m:58, r:"北"},
-                    {h:17, m:20, r:"北"}, {h:17, m:40, r:"北"},
-                    {h:18, m:15, r:"北"}, {h:18, m:31, r:"北"}, {h:18, m:45, r:"北"},
-                    {h:19, m:12, r:"北"}, {h:19, m:35, r:"北"}, {h:19, m:47, r:"北"},
-                    {h:20, m:19, r:"南"}, {h:20, m:42, r:"南"},
-                    {h:21, m:16, r:"北"}, {h:21, m:34, r:"北"}, {h:21, m:55, r:"北"}
-                ]
-            }
-        };
+    <div class="drawer-section">
+        <div class="drawer-item danger" onclick="resetToDefault()">
+            <div class="drawer-icon">🔄</div>
+            <div>
+                <div class="drawer-label">初期データに戻す</div>
+                <div class="drawer-sub">編集内容をすべてリセット</div>
+            </div>
+        </div>
+    </div>
+</div>
+<input type="file" id="csv-input" accept=".csv,text/csv" style="display:none" onchange="importCSV(event)">
 
-        // 🛠【修正箇所】以前の古い保存データを一度強制的に上書き・リセットする処理を追加しました！
-        const versionKey = 'bus_db_v2_updated_260413';
-        let db;
-        if (!localStorage.getItem(versionKey)) {
-            // 新改正データを強制適用して保存
-            db = defaultData;
-            localStorage.setItem('bus_db_v2', JSON.stringify(defaultData));
-            localStorage.setItem(versionKey, 'true'); // 上書き完了フラグ
+<!-- トースト -->
+<div class="toast" id="toast"></div>
+
+<div class="footer-nav">
+    <button id="btn-atsu" class="btn active" onclick="setStation('atsu')">厚板事務所前</button>
+    <button id="btn-wada" class="btn" onclick="setStation('wada')">渡田西門前</button>
+</div>
+
+<script>
+// ==================== デフォルトデータ ====================
+const DEFAULT_DATA = {
+    atsu: {
+        h: [
+            {h:6,m:32,r:"南"},{h:6,m:34,r:"南"},{h:6,m:41,r:"北"},{h:6,m:43,r:"北"},{h:6,m:48,r:"南"},{h:6,m:54,r:"南"},{h:6,m:57,r:"北"},
+            {h:7,m:3,r:"北"},{h:7,m:17,r:"北"},{h:7,m:18,r:"南"},{h:7,m:27,r:"北"},{h:7,m:29,r:"北"},{h:7,m:34,r:"南"},{h:7,m:35,r:"北"},{h:7,m:43,r:"北"},{h:7,m:48,r:"南"},{h:7,m:57,r:"北"},
+            {h:8,m:2,r:"南"},{h:8,m:11,r:"北"},{h:8,m:16,r:"南"},{h:8,m:25,r:"北"},{h:8,m:37,r:"北"},
+            {h:9,m:11,r:"北"},{h:9,m:27,r:"北"},
+            {h:10,m:6,r:"北"},{h:10,m:47,r:"北"},
+            {h:11,m:57,r:"北"},
+            {h:12,m:47,r:"北"},
+            {h:13,m:24,r:"北"},
+            {h:14,m:5,r:"北"},{h:14,m:44,r:"北"},{h:14,m:57,r:"北"},
+            {h:15,m:17,r:"北"},{h:15,m:44,r:"北"},{h:15,m:58,r:"南"},{h:15,m:59,r:"北"},
+            {h:16,m:8,r:"南"},{h:16,m:18,r:"南"},{h:16,m:30,r:"南"},{h:16,m:46,r:"南"},{h:16,m:53,r:"南"},
+            {h:17,m:8,r:"南"},{h:17,m:12,r:"南"},{h:17,m:19,r:"南"},{h:17,m:35,r:"南"},{h:17,m:43,r:"南"},
+            {h:18,m:3,r:"南"},{h:18,m:23,r:"南"},{h:18,m:38,r:"南"},{h:18,m:53,r:"南"},
+            {h:19,m:8,r:"南"},{h:19,m:26,r:"北"},{h:19,m:33,r:"南"},{h:19,m:47,r:"北"},
+            {h:20,m:3,r:"南"},{h:20,m:15,r:"北"},{h:20,m:28,r:"南"},
+            {h:21,m:0,r:"南"},{h:21,m:13,r:"南"},{h:21,m:43,r:"南"},{h:21,m:56,r:"南"},
+            {h:22,m:18,r:"南"}
+        ],
+        k: [
+            {h:6,m:32,r:"南"},{h:6,m:41,r:"北"},{h:6,m:48,r:"南"},
+            {h:7,m:6,r:"北"},{h:7,m:19,r:"南"},{h:7,m:33,r:"南"},{h:7,m:47,r:"南"},
+            {h:8,m:0,r:"南"},{h:8,m:22,r:"南"},
+            {h:9,m:12,r:"北"},{h:9,m:39,r:"北"},{h:9,m:57,r:"北"},
+            {h:10,m:42,r:"北"},
+            {h:11,m:24,r:"北"},
+            {h:12,m:6,r:"北"},{h:12,m:33,r:"南"},
+            {h:13,m:8,r:"南"},{h:13,m:48,r:"南"},{h:13,m:57,r:"北"},
+            {h:14,m:29,r:"南"},
+            {h:15,m:7,r:"北"},{h:15,m:42,r:"北"},
+            {h:16,m:15,r:"北"},{h:16,m:37,r:"北"},
+            {h:17,m:2,r:"北"},{h:17,m:25,r:"北"},{h:17,m:47,r:"北"},
+            {h:18,m:7,r:"北"},{h:18,m:42,r:"北"},{h:18,m:58,r:"北"},
+            {h:19,m:12,r:"北"},{h:19,m:39,r:"北"},
+            {h:20,m:2,r:"北"},{h:20,m:14,r:"北"},{h:20,m:37,r:"南"},
+            {h:21,m:0,r:"南"},{h:21,m:43,r:"北"},
+            {h:22,m:1,r:"北"},{h:22,m:22,r:"北"}
+        ]
+    },
+    wada: {
+        h: [
+            {h:6,m:14,r:"南"},{h:6,m:14,r:"北"},{h:6,m:16,r:"南"},{h:6,m:16,r:"北"},{h:6,m:30,r:"南"},{h:6,m:30,r:"北"},{h:6,m:36,r:"南"},{h:6,m:36,r:"北"},{h:6,m:50,r:"南"},
+            {h:7,m:0,r:"南"},{h:7,m:0,r:"北"},{h:7,m:2,r:"北"},{h:7,m:8,r:"北"},{h:7,m:16,r:"南"},{h:7,m:16,r:"北"},{h:7,m:30,r:"南"},{h:7,m:30,r:"北"},{h:7,m:44,r:"南"},{h:7,m:44,r:"北"},{h:7,m:58,r:"南"},{h:7,m:58,r:"北"},
+            {h:8,m:10,r:"北"},{h:8,m:35,r:"北"},{h:8,m:51,r:"北"},
+            {h:9,m:30,r:"北"},
+            {h:10,m:11,r:"北"},
+            {h:11,m:30,r:"北"},
+            {h:12,m:20,r:"北"},{h:12,m:48,r:"北"},
+            {h:13,m:38,r:"北"},
+            {h:14,m:8,r:"北"},{h:14,m:30,r:"南"},{h:14,m:50,r:"南"},
+            {h:15,m:17,r:"北"},{h:15,m:32,r:"北"},{h:15,m:40,r:"南"},{h:15,m:50,r:"南"},
+            {h:16,m:0,r:"南"},{h:16,m:12,r:"南"},{h:16,m:28,r:"南"},{h:16,m:35,r:"南"},{h:16,m:50,r:"南"},{h:16,m:54,r:"南"},
+            {h:17,m:1,r:"南"},{h:17,m:17,r:"南"},{h:17,m:25,r:"南"},{h:17,m:45,r:"南"},
+            {h:18,m:5,r:"南"},{h:18,m:20,r:"南"},{h:18,m:35,r:"南"},{h:18,m:50,r:"南"},{h:18,m:59,r:"北"},
+            {h:19,m:15,r:"南"},{h:19,m:20,r:"北"},{h:19,m:45,r:"南"},{h:19,m:48,r:"北"},
+            {h:20,m:10,r:"南"},{h:20,m:42,r:"南"},{h:20,m:55,r:"南"},
+            {h:21,m:25,r:"南"},{h:21,m:38,r:"南"},
+            {h:22,m:0,r:"南"}
+        ],
+        k: [
+            {h:6,m:14,r:"南"},{h:6,m:14,r:"北"},{h:6,m:30,r:"南"},{h:6,m:39,r:"北"},
+            {h:7,m:1,r:"南"},{h:7,m:15,r:"南"},{h:7,m:29,r:"南"},{h:7,m:42,r:"南"},
+            {h:8,m:4,r:"南"},{h:8,m:45,r:"北"},
+            {h:9,m:12,r:"北"},{h:9,m:30,r:"北"},
+            {h:10,m:6,r:"北"},{h:10,m:48,r:"北"},
+            {h:11,m:30,r:"北"},
+            {h:12,m:15,r:"南"},{h:12,m:50,r:"南"},
+            {h:13,m:30,r:"南"},{h:13,m:30,r:"北"},
+            {h:14,m:11,r:"南"},{h:14,m:40,r:"北"},
+            {h:15,m:15,r:"北"},{h:15,m:48,r:"北"},
+            {h:16,m:10,r:"北"},{h:16,m:35,r:"北"},{h:16,m:58,r:"北"},
+            {h:17,m:20,r:"北"},{h:17,m:40,r:"北"},
+            {h:18,m:15,r:"北"},{h:18,m:31,r:"北"},{h:18,m:45,r:"北"},
+            {h:19,m:12,r:"北"},{h:19,m:35,r:"北"},{h:19,m:47,r:"北"},
+            {h:20,m:19,r:"南"},{h:20,m:42,r:"南"},
+            {h:21,m:16,r:"北"},{h:21,m:34,r:"北"},{h:21,m:55,r:"北"}
+        ]
+    }
+};
+
+// ==================== 状態 ====================
+const VER_KEY = 'bus_db_v2_updated_260413';
+let db;
+if (!localStorage.getItem(VER_KEY)) {
+    db = JSON.parse(JSON.stringify(DEFAULT_DATA));
+    localStorage.setItem('bus_db_v2', JSON.stringify(db));
+    localStorage.setItem(VER_KEY, 'true');
+} else {
+    db = JSON.parse(localStorage.getItem('bus_db_v2') || JSON.stringify(DEFAULT_DATA));
+}
+
+let currentSt = 'atsu';
+let dayMode = 'h';
+let isEditMode = false;
+let selectedBus = null;
+let initialScrollDone = false;
+
+// ==================== 祝日データ（オフライン内蔵・2025〜2027年） ====================
+const HOLIDAYS = {
+    "2025-01-01":"元日","2025-01-13":"成人の日","2025-02-11":"建国記念の日",
+    "2025-02-23":"天皇誕生日","2025-02-24":"天皇誕生日 振替休日","2025-03-20":"春分の日",
+    "2025-04-29":"昭和の日","2025-05-03":"憲法記念日","2025-05-04":"みどりの日",
+    "2025-05-05":"こどもの日","2025-05-06":"こどもの日 振替休日","2025-07-21":"海の日",
+    "2025-08-11":"山の日","2025-09-15":"敬老の日","2025-09-23":"秋分の日",
+    "2025-10-13":"スポーツの日","2025-11-03":"文化の日","2025-11-23":"勤労感謝の日",
+    "2025-11-24":"勤労感謝の日 振替休日",
+    "2026-01-01":"元日","2026-01-12":"成人の日","2026-02-11":"建国記念の日",
+    "2026-02-23":"天皇誕生日","2026-03-20":"春分の日","2026-04-29":"昭和の日",
+    "2026-05-03":"憲法記念日","2026-05-04":"みどりの日","2026-05-05":"こどもの日",
+    "2026-05-06":"こどもの日 振替休日","2026-07-20":"海の日","2026-08-11":"山の日",
+    "2026-09-21":"敬老の日","2026-09-22":"国民の休日","2026-09-23":"秋分の日",
+    "2026-10-12":"スポーツの日","2026-11-03":"文化の日","2026-11-23":"勤労感謝の日",
+    "2027-01-01":"元日","2027-01-11":"成人の日","2027-02-11":"建国記念の日",
+    "2027-02-23":"天皇誕生日","2027-03-21":"春分の日","2027-03-22":"春分の日 振替休日",
+    "2027-04-29":"昭和の日","2027-05-03":"憲法記念日","2027-05-04":"みどりの日",
+    "2027-05-05":"こどもの日","2027-07-19":"海の日","2027-08-11":"山の日",
+    "2027-09-20":"敬老の日","2027-09-23":"秋分の日","2027-10-11":"スポーツの日",
+    "2027-11-03":"文化の日","2027-11-23":"勤労感謝の日"
+};
+
+// ==================== 祝日判定（オフライン対応） ====================
+function checkHoliday() {
+    const now = new Date();
+    const y = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    const todayStr = `${y}-${mm}-${dd}`;
+    const dow = now.getDay();
+    let isHoliday = (dow === 0 || dow === 6);
+    const holidayName = HOLIDAYS[todayStr] || '';
+    if (holidayName) isHoliday = true;
+
+    dayMode = isHoliday ? 'k' : 'h';
+    const badge = document.getElementById('day-badge');
+    if (holidayName) {
+        badge.innerText = `【祝日: ${holidayName}】`;
+        badge.style.color = 'var(--south)';
+    } else {
+        badge.innerText = isHoliday ? '今日は休日ダイヤです 🏠' : '今日は平日ダイヤです 👔';
+        badge.style.color = isHoliday ? 'var(--highlight)' : 'var(--accent)';
+    }
+    update();
+}
+
+// ==================== 描画 ====================
+function update() {
+    const now = new Date();
+    const h = now.getHours(), m = now.getMinutes();
+
+    document.getElementById('st-display').innerText = currentSt === 'atsu' ? '厚板事務所前' : '渡田西門前';
+    document.getElementById('tgl-h').classList.toggle('active', dayMode === 'h');
+    document.getElementById('tgl-k').classList.toggle('active', dayMode === 'k');
+    const gear = document.getElementById('edit-gear');
+    gear.classList.toggle('active', isEditMode);
+    gear.onclick = isEditMode ? toggleEditMode : openDrawer;
+    gear.title = isEditMode ? '編集終了・保存' : '設定';
+    gear.innerText = isEditMode ? '✅' : '⚙️';
+
+    const sorted = [...db[currentSt][dayMode]].sort((a, b) => (a.h * 60 + a.m) - (b.h * 60 + b.m));
+    const futures = sorted.filter(b => b.h * 60 + b.m > h * 60 + m);
+    const next = futures[0] || null;
+    const second = next ? futures.find(b => b.h * 60 + b.m > next.h * 60 + next.m) : null;
+
+    // 時刻表描画
+    const listDiv = document.getElementById('list');
+    listDiv.innerHTML = '';
+    let targetRow = null;
+
+    for (let hour = 5; hour <= 23; hour++) {
+        const mins = sorted.filter(b => b.h === hour);
+        if (!mins.length && !isEditMode) continue;
+
+        const row = document.createElement('div');
+        row.className = 'hour-row';
+        const wrap = document.createElement('div');
+        wrap.className = 'mins-wrap';
+        row.appendChild(Object.assign(document.createElement('div'), { className: 'hour-label', innerText: hour }));
+
+        mins.forEach(item => {
+            const isFuture = item.h * 60 + item.m > h * 60 + m;
+            const isNext = next && item.h === next.h && item.m === next.m && item.r === next.r;
+            const isSel = selectedBus && item.h === selectedBus.h && item.m === selectedBus.m && item.r === selectedBus.r;
+            const box = document.createElement('div');
+            box.className = [
+                'min-box',
+                item.r === '北' ? 'rt-kita' : 'rt-minami',
+                isFuture ? 'active' : '',
+                isNext ? 'next-hl' : '',
+                isSel ? 'sel' : '',
+                isEditMode ? 'editable' : ''
+            ].filter(Boolean).join(' ');
+            box.innerHTML = `<div class="m-val">${String(item.m).padStart(2,'0')}</div><div class="m-route">${item.r}</div>`;
+            box.onclick = () => isEditMode ? removeTime(item) : (isFuture && selectBus(item));
+            wrap.appendChild(box);
+            if (isNext) targetRow = row;
+        });
+
+        if (isEditMode) {
+            const addBtn = document.createElement('div');
+            addBtn.className = 'add-btn';
+            addBtn.innerText = '＋ 追加';
+            addBtn.onclick = () => addTime(hour);
+            wrap.appendChild(addBtn);
+        }
+
+        row.appendChild(wrap);
+        listDiv.appendChild(row);
+    }
+
+    // 次のバス表示
+    const displayBus = selectedBus || next;
+    const nextArea = document.getElementById('next-area');
+    nextArea.classList.toggle('is-selected', !!selectedBus);
+
+    if (displayBus) {
+        document.getElementById('next-t').innerText = `${displayBus.h}:${String(displayBus.m).padStart(2,'0')}`;
+
+        let routesHTML = '';
+        if (selectedBus) {
+            const color = selectedBus.r === '北' ? 'var(--accent)' : 'var(--south)';
+            routesHTML = `<span class="route-badge" style="background:${color};">${selectedBus.r}周り (選)</span>`;
         } else {
-            // 2回目以降は、編集機能の内容も保持できるように通常読み込み
-            db = JSON.parse(localStorage.getItem('bus_db_v2') || JSON.stringify(defaultData));
+            const same = sorted.filter(b => b.h === displayBus.h && b.m === displayBus.m);
+            routesHTML = same.map(b => {
+                const color = b.r === '北' ? 'var(--accent)' : 'var(--south)';
+                return `<span class="route-badge" style="background:${color};">${b.r}周り</span>`;
+            }).join('');
+        }
+        document.getElementById('next-routes').innerHTML = routesHTML;
+
+        const diffMin = Math.ceil((new Date().setHours(displayBus.h, displayBus.m, 0, 0) - now) / 60000);
+        document.getElementById('count').innerText = `あと ${diffMin} 分`;
+
+        const secEl = document.getElementById('second-info');
+        if (second && !selectedBus) {
+            secEl.innerText = `次は ${second.h}:${String(second.m).padStart(2,'0')} (${second.r}周り)`;
+            secEl.style.display = 'block';
+        } else {
+            secEl.style.display = 'none';
         }
 
-        let currentSt = 'atsu';
-        let dayMode = 'h';
-        let isEditMode = false;
-        let initialScrollDone = false;
-        let selectedBus = null;
+        if (!initialScrollDone && targetRow) {
+            setTimeout(() => { targetRow.scrollIntoView({ behavior: 'smooth', block: 'start' }); initialScrollDone = true; }, 300);
+        }
+    } else {
+        document.getElementById('next-t').innerText = '--:--';
+        document.getElementById('next-routes').innerHTML = '';
+        document.getElementById('count').innerText = '運行終了';
+        document.getElementById('second-info').style.display = 'none';
+    }
+}
 
-        async function checkHoliday() {
-            const now = new Date();
-            const y = now.getFullYear();
-            const m = (now.getMonth() + 1).toString().padStart(2, '0');
-            const d = now.getDate().toString().padStart(2, '0');
-            const todayStr = `${y}-${m}-${d}`;
-            const dayOfWeek = now.getDay();
-            let isHoliday = (dayOfWeek === 0 || dayOfWeek === 6);
-            let holidayName = "";
+// ==================== 操作 ====================
+function setStation(id) {
+    currentSt = id;
+    selectedBus = null;
+    initialScrollDone = false;
+    document.getElementById('btn-atsu').classList.toggle('active', id === 'atsu');
+    document.getElementById('btn-wada').classList.toggle('active', id === 'wada');
+    update();
+}
+function setDayMode(mode) {
+    dayMode = mode;
+    selectedBus = null;
+    initialScrollDone = false;
+    update();
+}
+function selectBus(bus) {
+    selectedBus = (selectedBus && selectedBus.h === bus.h && selectedBus.m === bus.m && selectedBus.r === bus.r) ? null : bus;
+    update();
+}
+function toggleEditMode() {
+    isEditMode = !isEditMode;
+    if (isEditMode) selectedBus = null;
+    update();
+    if (!isEditMode) {
+        localStorage.setItem('bus_db_v2', JSON.stringify(db));
+        showToast('💾 保存しました', 'ok');
+    }
+}
+function addTime(hour) {
+    const min = prompt(`${hour}時台の何分？（0〜59）`);
+    if (min === null || min === '' || isNaN(min)) return;
+    const route = confirm('OK → 北周り　 キャンセル → 南周り') ? '北' : '南';
+    db[currentSt][dayMode].push({ h: hour, m: parseInt(min), r: route });
+    update();
+}
+function removeTime(item) {
+    if (!confirm(`${item.h}:${String(item.m).padStart(2,'0')} ${item.r}周り を削除しますか？`)) return;
+    db[currentSt][dayMode] = db[currentSt][dayMode].filter(b => !(b.h === item.h && b.m === item.m && b.r === item.r));
+    update();
+}
 
-            try {
-                const res = await fetch(`https://holidays-jp.github.io/api/v1/date.json`);
-                const holidays = await res.json();
-                if (holidays[todayStr]) {
-                    isHoliday = true;
-                    holidayName = `【祝日: ${holidays[todayStr]}】`;
-                }
-            } catch (e) { console.error(e); }
+// ==================== 設定ドロワー ====================
+function openDrawer() {
+    document.getElementById('drawer').classList.add('open');
+    document.getElementById('drawer-overlay').classList.add('open');
+}
+function closeDrawer() {
+    document.getElementById('drawer').classList.remove('open');
+    document.getElementById('drawer-overlay').classList.remove('open');
+}
+function startEditMode() {
+    closeDrawer();
+    isEditMode = true;
+    selectedBus = null;
+    update();
+}
 
-            dayMode = isHoliday ? 'k' : 'h';
-            const label = document.getElementById('day-label');
-            if (holidayName) {
-                label.innerText = holidayName;
-                label.style.color = "var(--south)";
-            } else {
-                label.innerText = isHoliday ? "今日は休日ダイヤです 🏠" : "今日は平日ダイヤです 👔";
-                label.style.color = isHoliday ? "var(--highlight)" : "var(--accent)";
+// ==================== CSVエクスポート ====================
+function exportCSV() {
+    closeDrawer();
+    const rows = ['停留所,平日休日,時,分,路線'];
+    ['atsu','wada'].forEach(st => {
+        ['h','k'].forEach(d => {
+            db[st][d].forEach(item => {
+                rows.push(`${st},${d},${item.h},${item.m},${item.r}`);
+            });
+        });
+    });
+    const blob = new Blob(['\uFEFF' + rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'bus_timetable.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('📤 CSVを書き出しました', 'ok');
+}
+
+// ==================== CSVインポート ====================
+function importCSV(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const text = e.target.result.replace(/^\uFEFF/, '');
+            const lines = text.split('\n').map(l => l.trim()).filter(l => l);
+            const startIdx = lines[0].startsWith('停留所') ? 1 : 0;
+            const newData = { atsu: { h:[], k:[] }, wada: { h:[], k:[] } };
+            for (let i = startIdx; i < lines.length; i++) {
+                const [st, d, hStr, mStr, r] = lines[i].split(',').map(c => c.trim());
+                if (!newData[st] || !newData[st][d]) continue;
+                const h = parseInt(hStr), m = parseInt(mStr);
+                if (isNaN(h) || isNaN(m)) continue;
+                newData[st][d].push({ h, m, r });
             }
+            const total = Object.values(newData).flatMap(s => Object.values(s)).flat().length;
+            if (total === 0) throw new Error('empty');
+            db = newData;
+            localStorage.setItem('bus_db_v2', JSON.stringify(db));
             update();
+            showToast(`📥 ${total}件を取り込みました`, 'ok');
+        } catch(err) {
+            showToast('❌ 読み込みに失敗しました', 'ng');
         }
+        event.target.value = '';
+    };
+    reader.readAsText(file, 'UTF-8');
+}
 
-        async function updateWeather() {
-            const btn = document.getElementById('refresh-btn');
-            if (btn) btn.classList.add('spinning');
+// ==================== リセット ====================
+function resetToDefault() {
+    if (!confirm('初期データに戻しますか？\n編集した内容はすべて消えます。')) return;
+    db = JSON.parse(JSON.stringify(DEFAULT_DATA));
+    localStorage.setItem('bus_db_v2', JSON.stringify(db));
+    closeDrawer();
+    update();
+    showToast('🔄 初期データに戻しました', 'ok');
+}
 
-            const container = document.getElementById('weather-info');
-            try {
-                const resJP = await fetch(`https://weather.tsukumijima.net/api/forecast/city/140010`);
-                const dataJP = await resJP.json();
-                const resCur = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=35.53&longitude=139.70&current_weather=true&timezone=Asia%2FTokyo`);
-                const dataCur = await resCur.json();
-                
-                const today = dataJP.forecasts[0];
-                const tomorrow = dataJP.forecasts[1];
-                const curTemp = Math.round(dataCur.current_weather.temperature);
-                
-                const nowH = new Date().getHours();
-                let rainProb = "--";
-                const rainObj = today.chanceOfRain;
-                if(nowH < 6) rainProb = rainObj.T00_06;
-                else if(nowH < 12) rainProb = rainObj.T06_12;
-                else if(nowH < 18) rainProb = rainObj.T12_18;
-                else rainProb = rainObj.T18_24;
-                if (rainProb === "--" || !rainProb) rainProb = tomorrow.chanceOfRain.T06_12;
+// ==================== トースト ====================
+function showToast(msg, type = '') {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast ' + type;
+    requestAnimationFrame(() => {
+        t.classList.add('show');
+        setTimeout(() => t.classList.remove('show'), 3000);
+    });
+}
 
-                const maxT = today.temperature.max.celsius || tomorrow.temperature.max.celsius || "--";
-                const minT = today.temperature.min.celsius || tomorrow.temperature.min.celsius || "--";
-
-                container.innerHTML = `
-                    <div class="temp-now">
-                        <img src="${today.image.url}" class="weather-icon">
-                        <span>${curTemp}°C</span>
-                        <span style="font-size:0.8rem; opacity:0.9; color:var(--text);">${today.telop}</span>
-                        <button class="refresh-btn" id="refresh-btn" onclick="updateWeather()">🔄</button>
-                    </div>
-                    <div class="temp-sub">
-                        <span class="label-hi">最高 ${maxT}°</span>
-                        <span class="label-lo">最低 ${minT}°</span>
-                        <span class="rain-chance">☔ ${rainProb}</span>
-                    </div>
-                `;
-            } catch (e) { container.innerText = "天気取得エラー"; }
-            
-            setTimeout(() => {
-                const b = document.getElementById('refresh-btn');
-                if(b) b.classList.remove('spinning');
-            }, 800);
-        }
-
-        function update() {
-            const now = new Date();
-            const h = now.getHours(); const m = now.getMinutes();
-            document.getElementById('tgl-h').classList.toggle('active', dayMode === 'h');
-            document.getElementById('tgl-k').classList.toggle('active', dayMode === 'k');
-            document.getElementById('st-display').innerText = (currentSt === 'atsu' ? "厚板事務所前" : "渡田西門前");
-            
-            const list = db[currentSt][dayMode].sort((a,b) => (a.h * 60 + a.m) - (b.h * 60 + b.m));
-            const futures = list.filter(item => (item.h > h) || (item.h === h && item.m > m));
-            const next = futures[0] || null;
-            
-            let second = null;
-            if (next) {
-                second = futures.find(item => (item.h * 60 + item.m) > (next.h * 60 + next.m));
-            }
-
-            const listDiv = document.getElementById('list');
-            listDiv.innerHTML = '';
-            let targetRow = null;
-
-            for (let hour = 5; hour <= 23; hour++) {
-                const mins = list.filter(item => item.h === hour);
-                if (mins.length === 0 && !isEditMode) continue;
-                const row = document.createElement('div');
-                row.className = 'hour-row';
-                row.innerHTML = `<div class="hour-label">${hour}</div>`;
-                const wrap = document.createElement('div');
-                wrap.className = 'mins-wrap';
-                mins.forEach((item) => {
-                    const isNextBus = next && (item.h === next.h && item.m === next.m && item.r === next.r);
-                    const isSelected = selectedBus && (item.h === selectedBus.h && item.m === selectedBus.m && item.r === selectedBus.r);
-                    const box = document.createElement('div');
-                    const isFuture = (hour > h) || (hour === h && item.m > m);
-                    box.className = `min-box ${isFuture ? 'active' : ''} ${item.r === '北' ? 'rt-kita' : 'rt-minami'} ${isEditMode ? 'editable' : ''} ${isNextBus ? 'next-highlight' : ''} ${isSelected ? 'selected-bus' : ''}`;
-                    box.innerHTML = `<div class="m-val">${item.m.toString().padStart(2,'0')}</div><div class="m-route">${item.r}</div>`;
-                    box.onclick = () => isEditMode ? removeTime(hour, item.m, item.r) : (isFuture && selectBus(item));
-                    wrap.appendChild(box);
-                    if (isNextBus) targetRow = row;
-                });
-                if (isEditMode) {
-                    const addBtn = document.createElement('div');
-                    addBtn.className = 'add-min-btn';
-                    addBtn.innerText = '+ 追加';
-                    addBtn.onclick = () => addTime(hour);
-                    wrap.appendChild(addBtn);
-                }
-                row.appendChild(wrap);
-                listDiv.appendChild(row);
-            }
-
-            const displayBus = selectedBus || next;
-            const cardArea = document.getElementById('card-area');
-            cardArea.classList.toggle('is-selected', !!selectedBus);
-            
-            if (displayBus) {
-                document.getElementById('next-t').innerText = `${displayBus.h}:${displayBus.m.toString().padStart(2,'0')}`;
-                let routesHTML = "";
-                if (selectedBus) {
-                    const color = displayBus.r === '北' ? 'var(--accent)' : 'var(--south)';
-                    routesHTML = `<span class="next-route" style="background:${color};">${displayBus.r}周り (選)</span>`;
-                } else {
-                    const sameTimeBuses = list.filter(b => b.h === displayBus.h && b.m === displayBus.m);
-                    routesHTML = sameTimeBuses.map(b => {
-                        const color = b.r === '北' ? 'var(--accent)' : 'var(--south)';
-                        return `<span class="next-route" style="background:${color};">${b.r}周り</span>`;
-                    }).join('');
-                }
-                document.getElementById('next-route-container').innerHTML = routesHTML;
-
-                const diff = Math.ceil((new Date().setHours(displayBus.h, displayBus.m, 0) - now) / 60000);
-                document.getElementById('count').innerText = `あと ${diff} 分`;
-                
-                if (second && !selectedBus) {
-                    document.getElementById('second-info').innerText = `次は ${second.h}:${second.m.toString().padStart(2,'0')} (${second.r})`;
-                    document.getElementById('second-info').style.display = 'flex';
-                } else { document.getElementById('second-info').style.display = 'none'; }
-                
-                if (!initialScrollDone && targetRow) {
-                    setTimeout(() => { targetRow.scrollIntoView({ behavior: 'smooth', block: 'start' }); initialScrollDone = true; }, 300);
-                }
-            } else { 
-                document.getElementById('next-t').innerText = "--:--"; 
-                document.getElementById('next-route-container').innerHTML = ""; 
-                document.getElementById('count').innerText = "運行終了"; 
-                document.getElementById('second-info').style.display = 'none'; 
-            }
-        }
-
-        function toggleEditMode() { isEditMode = !isEditMode; if (isEditMode) selectedBus = null; update(); if (!isEditMode) localStorage.setItem('bus_db_v2', JSON.stringify(db)); }
-        function selectBus(bus) { selectedBus = (selectedBus && selectedBus.h === bus.h && selectedBus.m === bus.m && selectedBus.r === bus.r) ? null : bus; update(); }
-        function addTime(hour) { const min = prompt(`${hour}時台の何分？`); if (!min || isNaN(min)) return; const route = confirm("OK→北周り / キャンセル→南周り") ? "北" : "南"; db[currentSt][dayMode].push({h: parseInt(hour), m: parseInt(min), r: route}); update(); }
-        function removeTime(hour, min, route) { if (confirm("削除しますか？")) { db[currentSt][dayMode] = db[currentSt][dayMode].filter(i => !(i.h === hour && i.m === min && i.r === route)); update(); } }
-        function setStation(id) { currentSt = id; initialScrollDone = false; selectedBus = null; update(); document.getElementById('btn-atsu').classList.toggle('active', id==='atsu'); document.getElementById('btn-wada').classList.toggle('active', id==='wada'); }
-        function setDayMode(mode) { dayMode = mode; initialScrollDone = false; selectedBus = null; update(); }
-        
-        checkHoliday();
-        setInterval(update, 10000); updateWeather(); setInterval(updateWeather, 600000);
-    </script>
+// ==================== 起動 ====================
+checkHoliday();
+setInterval(update, 10000);
+</script>
 </body>
 </html>
