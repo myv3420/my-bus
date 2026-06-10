@@ -44,7 +44,6 @@
             box-shadow: 0 8px 24px rgba(0,0,0,0.5);
         }
 
-        /* 停留所名 */
         .station-row {
             display: flex;
             align-items: center;
@@ -70,7 +69,6 @@
         }
         .edit-gear.active { background: rgba(255,75,87,0.2); border-color: #ff4757; color: #ff4757; }
 
-        /* 日付バッジ */
         .day-badge {
             font-size: 0.72rem;
             font-weight: bold;
@@ -78,7 +76,6 @@
             margin-bottom: 8px;
         }
 
-        /* 平日／休日トグル */
         .day-toggle {
             display: flex;
             background: rgba(0,0,0,0.3);
@@ -101,7 +98,6 @@
         }
         .tgl-btn.active { background: var(--text); color: var(--bg); opacity: 1; }
 
-        /* 次のバスエリア */
         .next-area {
             background: rgba(201,184,255,0.04);
             border: 1px solid var(--accent);
@@ -243,6 +239,8 @@
             transform: translateY(100%);
             transition: transform 0.3s cubic-bezier(0.32,0.72,0,1);
             border-top: 1px solid rgba(255,255,255,0.1);
+            max-height: 85vh;
+            overflow-y: auto;
         }
         .drawer.open { transform: translateY(0); }
         .drawer-handle {
@@ -280,6 +278,67 @@
         .drawer-label { font-size: 0.9rem; font-weight: bold; flex: 1; }
         .drawer-sub { font-size: 0.7rem; opacity: 0.5; }
 
+        /* ── バス停選択ドロワー ── */
+        .slot-assign-panel {
+            padding: 12px 16px 16px;
+        }
+        .slot-assign-title {
+            font-size: 0.75rem;
+            font-weight: bold;
+            color: rgba(255,255,255,0.4);
+            letter-spacing: 0.06em;
+            margin-bottom: 10px;
+        }
+        .slot-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+        .slot-label-tag {
+            font-size: 0.72rem;
+            font-weight: bold;
+            background: rgba(255,255,255,0.08);
+            border-radius: 6px;
+            padding: 4px 8px;
+            white-space: nowrap;
+            flex-shrink: 0;
+            min-width: 46px;
+            text-align: center;
+        }
+        .slot-select {
+            flex: 1;
+            background: rgba(0,0,0,0.35);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 8px;
+            color: var(--text);
+            font-family: inherit;
+            font-size: 0.82rem;
+            padding: 8px 10px;
+            appearance: none;
+            -webkit-appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23c9b8ff' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            padding-right: 28px;
+            cursor: pointer;
+        }
+        .slot-select:focus { outline: none; border-color: var(--accent); }
+        .slot-apply-btn {
+            width: 100%;
+            padding: 11px;
+            background: var(--accent);
+            color: var(--bg);
+            border: none;
+            border-radius: 10px;
+            font-family: inherit;
+            font-size: 0.88rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 4px;
+        }
+        .slot-apply-btn:active { opacity: 0.85; }
+
         /* トースト */
         .toast {
             position: fixed;
@@ -315,15 +374,18 @@
         }
         .btn {
             flex: 1;
-            padding: 13px;
+            padding: 11px 6px;
             border-radius: 12px;
             border: 1px solid rgba(201,184,255,0.3);
             font-weight: bold;
             background: var(--surface2);
             color: var(--text);
             font-family: inherit;
-            font-size: 0.88rem;
+            font-size: 0.78rem;
             cursor: pointer;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
         .btn.active { background: var(--accent); color: var(--bg); border-color: var(--accent); }
     </style>
@@ -357,6 +419,22 @@
 <div class="drawer" id="drawer">
     <div class="drawer-handle"></div>
     <div class="drawer-title">⚙️ 設定・ダイヤ管理</div>
+
+    <!-- バス停ボタン割り当て -->
+    <div class="drawer-section">
+        <div class="slot-assign-panel">
+            <div class="slot-assign-title">🚌 ボタンに表示するバス停</div>
+            <div class="slot-row">
+                <div class="slot-label-tag">左ボタン</div>
+                <select id="slot-left-sel" class="slot-select"></select>
+            </div>
+            <div class="slot-row">
+                <div class="slot-label-tag">右ボタン</div>
+                <select id="slot-right-sel" class="slot-select"></select>
+            </div>
+            <button class="slot-apply-btn" onclick="applySlotConfig()">✅ 適用する</button>
+        </div>
+    </div>
 
     <div class="drawer-section">
         <div class="drawer-item" onclick="startEditMode()">
@@ -401,11 +479,18 @@
 <div class="toast" id="toast"></div>
 
 <div class="footer-nav">
-    <button id="btn-atsu" class="btn active" onclick="setStation('atsu')">厚板事務所前</button>
-    <button id="btn-wada" class="btn" onclick="setStation('wada')">渡田西門前</button>
+    <button id="btn-slot0" class="btn active" onclick="setStation(slotConfig[0])">厚板事務所前</button>
+    <button id="btn-slot1" class="btn" onclick="setStation(slotConfig[1])">渡田西門前</button>
 </div>
 
 <script>
+// ==================== バス停マスター ====================
+const STATION_NAMES = {
+    atsu:  '厚板事務所前',
+    wada:  '渡田西門前',
+    ikeg:  '池上正門'
+};
+
 // ==================== デフォルトデータ ====================
 const DEFAULT_DATA = {
     atsu: {
@@ -486,6 +571,46 @@ const DEFAULT_DATA = {
             {h:20,m:19,r:"南"},{h:20,m:42,r:"南"},
             {h:21,m:16,r:"北"},{h:21,m:34,r:"北"},{h:21,m:55,r:"北"}
         ]
+    },
+    ikeg: {
+        h: [
+            {h:6,m:20,r:"南"},{h:6,m:20,r:"北"},{h:6,m:22,r:"南"},{h:6,m:22,r:"北"},{h:6,m:36,r:"南"},{h:6,m:36,r:"北"},{h:6,m:42,r:"南"},{h:6,m:42,r:"北"},{h:6,m:56,r:"北"},
+            {h:7,m:6,r:"南"},{h:7,m:6,r:"北"},{h:7,m:8,r:"北"},{h:7,m:14,r:"北"},{h:7,m:22,r:"南"},{h:7,m:22,r:"北"},{h:7,m:36,r:"南"},{h:7,m:36,r:"北"},{h:7,m:50,r:"南"},{h:7,m:50,r:"北"},
+            {h:8,m:4,r:"南"},{h:8,m:4,r:"北"},{h:8,m:16,r:"北"},{h:8,m:41,r:"北"},{h:8,m:57,r:"北"},
+            {h:9,m:36,r:"北"},
+            {h:10,m:17,r:"北"},
+            {h:11,m:36,r:"北"},
+            {h:12,m:26,r:"北"},{h:12,m:54,r:"北"},
+            {h:13,m:44,r:"北"},
+            {h:14,m:14,r:"北"},{h:14,m:36,r:"北"},{h:14,m:56,r:"北"},
+            {h:15,m:23,r:"北"},{h:15,m:38,r:"北"},{h:15,m:46,r:"南"},{h:15,m:56,r:"南"},
+            {h:16,m:6,r:"南"},{h:16,m:18,r:"南"},{h:16,m:34,r:"南"},{h:16,m:41,r:"南"},{h:16,m:56,r:"南"},
+            {h:17,m:0,r:"南"},{h:17,m:7,r:"南"},{h:17,m:23,r:"南"},{h:17,m:31,r:"南"},{h:17,m:51,r:"南"},
+            {h:18,m:11,r:"南"},{h:18,m:26,r:"南"},{h:18,m:41,r:"南"},{h:18,m:56,r:"南"},
+            {h:19,m:5,r:"北"},{h:19,m:21,r:"南"},{h:19,m:26,r:"北"},{h:19,m:51,r:"南"},{h:19,m:54,r:"北"},
+            {h:20,m:16,r:"南"},{h:20,m:48,r:"南"},
+            {h:21,m:1,r:"南"},{h:21,m:31,r:"南"},{h:21,m:44,r:"南"},
+            {h:22,m:6,r:"南"}
+        ],
+        k: [
+            {h:6,m:20,r:"南"},{h:6,m:20,r:"北"},{h:6,m:36,r:"南"},{h:6,m:45,r:"北"},
+            {h:7,m:7,r:"南"},{h:7,m:21,r:"南"},{h:7,m:35,r:"南"},{h:7,m:48,r:"南"},
+            {h:8,m:10,r:"南"},{h:8,m:51,r:"北"},
+            {h:9,m:18,r:"北"},{h:9,m:36,r:"北"},
+            {h:10,m:12,r:"北"},{h:10,m:54,r:"北"},
+            {h:11,m:36,r:"北"},
+            {h:12,m:21,r:"南"},{h:12,m:56,r:"南"},
+            {h:13,m:36,r:"南"},{h:13,m:36,r:"北"},
+            {h:14,m:17,r:"南"},{h:14,m:46,r:"北"},
+            {h:15,m:21,r:"北"},{h:15,m:54,r:"北"},
+            {h:16,m:16,r:"北"},{h:16,m:41,r:"北"},
+            {h:17,m:4,r:"北"},{h:17,m:26,r:"北"},{h:17,m:46,r:"北"},
+            {h:18,m:21,r:"北"},{h:18,m:37,r:"北"},{h:18,m:51,r:"北"},
+            {h:19,m:18,r:"北"},{h:19,m:41,r:"北"},{h:19,m:53,r:"北"},
+            {h:20,m:25,r:"南"},{h:20,m:48,r:"南"},
+            {h:21,m:22,r:"北"},{h:21,m:40,r:"北"},
+            {h:22,m:1,r:"北"}
+        ]
     }
 };
 
@@ -498,9 +623,19 @@ if (!localStorage.getItem(VER_KEY)) {
     localStorage.setItem(VER_KEY, 'true');
 } else {
     db = JSON.parse(localStorage.getItem('bus_db_v2') || JSON.stringify(DEFAULT_DATA));
+    // 池上正門データが古いDBに無い場合は補完
+    if (!db.ikeg) {
+        db.ikeg = JSON.parse(JSON.stringify(DEFAULT_DATA.ikeg));
+        localStorage.setItem('bus_db_v2', JSON.stringify(db));
+    }
 }
 
-let currentSt = 'atsu';
+// スロット設定（左右ボタン）
+let slotConfig = JSON.parse(localStorage.getItem('bus_slot_config') || '["atsu","wada"]');
+// 古いデータや存在しないキーのチェック
+slotConfig = slotConfig.map(s => STATION_NAMES[s] ? s : Object.keys(STATION_NAMES)[0]);
+
+let currentSt = slotConfig[0];
 let dayMode = 'h';
 let isEditMode = false;
 let selectedBus = null;
@@ -529,7 +664,7 @@ const HOLIDAYS = {
     "2027-11-03":"文化の日","2027-11-23":"勤労感謝の日"
 };
 
-// ==================== 祝日判定（オフライン対応） ====================
+// ==================== 祝日判定 ====================
 function checkHoliday() {
     const now = new Date();
     const y = now.getFullYear();
@@ -558,7 +693,7 @@ function update() {
     const now = new Date();
     const h = now.getHours(), m = now.getMinutes();
 
-    document.getElementById('st-display').innerText = currentSt === 'atsu' ? '厚板事務所前' : '渡田西門前';
+    document.getElementById('st-display').innerText = STATION_NAMES[currentSt] || currentSt;
     document.getElementById('tgl-h').classList.toggle('active', dayMode === 'h');
     document.getElementById('tgl-k').classList.toggle('active', dayMode === 'k');
     const gear = document.getElementById('edit-gear');
@@ -567,7 +702,17 @@ function update() {
     gear.title = isEditMode ? '編集終了・保存' : '設定';
     gear.innerText = isEditMode ? '✅' : '⚙️';
 
-    const sorted = [...db[currentSt][dayMode]].sort((a, b) => (a.h * 60 + a.m) - (b.h * 60 + b.m));
+    // フッターボタン更新
+    slotConfig.forEach((stId, idx) => {
+        const btn = document.getElementById(`btn-slot${idx}`);
+        if (btn) {
+            btn.innerText = STATION_NAMES[stId] || stId;
+            btn.classList.toggle('active', stId === currentSt);
+            btn.onclick = () => setStation(stId);
+        }
+    });
+
+    const sorted = [...(db[currentSt]?.[dayMode] || [])].sort((a, b) => (a.h * 60 + a.m) - (b.h * 60 + b.m));
     const futures = sorted.filter(b => b.h * 60 + b.m > h * 60 + m);
     const next = futures[0] || null;
     const second = next ? futures.find(b => b.h * 60 + b.m > next.h * 60 + next.m) : null;
@@ -624,7 +769,7 @@ function update() {
     nextArea.classList.toggle('is-selected', !!selectedBus);
 
     if (displayBus) {
-        document.getElementById('next-t').innerText = `${displayBus.h}:${String(displayBus.m).padStart(2,'0')}`;
+        document.getElementById('next-t').innerText = `${displayBus.h}:${String(displayBus.m).padStart(2,'00')}`;
 
         let routesHTML = '';
         if (selectedBus) {
@@ -666,8 +811,6 @@ function setStation(id) {
     currentSt = id;
     selectedBus = null;
     initialScrollDone = false;
-    document.getElementById('btn-atsu').classList.toggle('active', id === 'atsu');
-    document.getElementById('btn-wada').classList.toggle('active', id === 'wada');
     update();
 }
 function setDayMode(mode) {
@@ -702,8 +845,40 @@ function removeTime(item) {
     update();
 }
 
+// ==================== スロット設定 ====================
+function buildSlotSelects() {
+    const stIds = Object.keys(STATION_NAMES);
+    ['slot-left-sel', 'slot-right-sel'].forEach((selId, idx) => {
+        const sel = document.getElementById(selId);
+        sel.innerHTML = '';
+        stIds.forEach(id => {
+            const opt = document.createElement('option');
+            opt.value = id;
+            opt.text = STATION_NAMES[id];
+            if (slotConfig[idx] === id) opt.selected = true;
+            sel.appendChild(opt);
+        });
+    });
+}
+function applySlotConfig() {
+    const leftVal = document.getElementById('slot-left-sel').value;
+    const rightVal = document.getElementById('slot-right-sel').value;
+    slotConfig = [leftVal, rightVal];
+    localStorage.setItem('bus_slot_config', JSON.stringify(slotConfig));
+    // 現在のバス停がスロットにない場合は左に合わせる
+    if (currentSt !== leftVal && currentSt !== rightVal) {
+        currentSt = leftVal;
+        selectedBus = null;
+        initialScrollDone = false;
+    }
+    closeDrawer();
+    update();
+    showToast('🚌 ボタンを更新しました', 'ok');
+}
+
 // ==================== 設定ドロワー ====================
 function openDrawer() {
+    buildSlotSelects();
     document.getElementById('drawer').classList.add('open');
     document.getElementById('drawer-overlay').classList.add('open');
 }
@@ -722,9 +897,9 @@ function startEditMode() {
 function exportCSV() {
     closeDrawer();
     const rows = ['停留所,平日休日,時,分,路線'];
-    ['atsu','wada'].forEach(st => {
+    Object.keys(db).forEach(st => {
         ['h','k'].forEach(d => {
-            db[st][d].forEach(item => {
+            (db[st][d] || []).forEach(item => {
                 rows.push(`${st},${d},${item.h},${item.m},${item.r}`);
             });
         });
@@ -749,7 +924,8 @@ function importCSV(event) {
             const text = e.target.result.replace(/^\uFEFF/, '');
             const lines = text.split('\n').map(l => l.trim()).filter(l => l);
             const startIdx = lines[0].startsWith('停留所') ? 1 : 0;
-            const newData = { atsu: { h:[], k:[] }, wada: { h:[], k:[] } };
+            const newData = {};
+            Object.keys(STATION_NAMES).forEach(id => { newData[id] = { h:[], k:[] }; });
             for (let i = startIdx; i < lines.length; i++) {
                 const [st, d, hStr, mStr, r] = lines[i].split(',').map(c => c.trim());
                 if (!newData[st] || !newData[st][d]) continue;
