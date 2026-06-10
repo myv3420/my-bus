@@ -1,5 +1,5 @@
 // キャッシュ名（ダイヤ改正時はここのバージョンを上げると全端末で強制更新される）
-const CACHE_NAME = 'bus-timetable-v1';
+const CACHE_NAME = 'bus-timetable-v2';
 
 // キャッシュするファイル
 const FILES = [
