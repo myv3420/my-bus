@@ -140,6 +140,13 @@
             margin-top: 6px;
             color: var(--text);
         }
+        .arrival-info {
+            font-size: 0.82rem;
+            font-weight: bold;
+            margin-top: 6px;
+            color: var(--south);
+            display: none;
+        }
         .second-bus {
             font-size: 0.78rem;
             opacity: 0.7;
@@ -408,6 +415,7 @@
             <div class="next-routes" id="next-routes"></div>
         </div>
         <div class="countdown" id="count">お待ちください</div>
+        <div class="arrival-info" id="arrival-info"></div>
         <div class="second-bus" id="second-info"></div>
     </div>
 </div>
@@ -490,6 +498,12 @@ const STATION_NAMES = {
     wada:  '渡田西門前',
     ikeg:  '池上正門'
 };
+
+// ==================== 所要時間設定（渡田西門前 → 厚板事務所前） ====================
+// 北周り・南周りそれぞれの所要時間（分）
+const TRAVEL_TIME = { 北: 27, 南: 18 };
+const ARRIVAL_ORIGIN = 'wada';   // この停留所を表示中のときだけ到着予定を出す
+const ARRIVAL_TARGET = 'atsu';   // 到着先の停留所
 
 // ==================== デフォルトデータ ====================
 const DEFAULT_DATA = {
@@ -688,6 +702,14 @@ function checkHoliday() {
     update();
 }
 
+// ==================== 到着時刻計算 ====================
+function addMinutes(h, m, addM) {
+    const total = h * 60 + m + addM;
+    const nh = Math.floor(total / 60) % 24;
+    const nm = total % 60;
+    return `${nh}:${String(nm).padStart(2,'0')}`;
+}
+
 // ==================== 描画 ====================
 function update() {
     const now = new Date();
@@ -746,7 +768,7 @@ function update() {
                 isEditMode ? 'editable' : ''
             ].filter(Boolean).join(' ');
             box.innerHTML = `<div class="m-val">${String(item.m).padStart(2,'0')}</div><div class="m-route">${item.r}</div>`;
-            box.onclick = () => isEditMode ? removeTime(item) : (isFuture && selectBus(item));
+            box.onclick = () => isEditMode ? removeTime(item) : selectBus(item);
             wrap.appendChild(box);
             if (isNext) targetRow = row;
         });
@@ -785,7 +807,24 @@ function update() {
         document.getElementById('next-routes').innerHTML = routesHTML;
 
         const diffMin = Math.ceil((new Date().setHours(displayBus.h, displayBus.m, 0, 0) - now) / 60000);
-        document.getElementById('count').innerText = `あと ${diffMin} 分`;
+        const countEl = document.getElementById('count');
+        if (diffMin >= 0) {
+            countEl.innerText = `あと ${diffMin} 分`;
+            countEl.style.display = 'block';
+        } else {
+            countEl.innerText = '';
+            countEl.style.display = 'none';
+        }
+
+        // 渡田西門前 表示時のみ、厚板事務所前への到着予定を表示
+        const arrivalEl = document.getElementById('arrival-info');
+        if (currentSt === ARRIVAL_ORIGIN && TRAVEL_TIME[displayBus.r] != null) {
+            const arrivalTime = addMinutes(displayBus.h, displayBus.m, TRAVEL_TIME[displayBus.r]);
+            arrivalEl.innerText = `🚏 ${STATION_NAMES[ARRIVAL_TARGET]} 着 ${arrivalTime} 頃`;
+            arrivalEl.style.display = 'block';
+        } else {
+            arrivalEl.style.display = 'none';
+        }
 
         const secEl = document.getElementById('second-info');
         if (second && !selectedBus) {
@@ -802,6 +841,7 @@ function update() {
         document.getElementById('next-t').innerText = '--:--';
         document.getElementById('next-routes').innerHTML = '';
         document.getElementById('count').innerText = '運行終了';
+        document.getElementById('arrival-info').style.display = 'none';
         document.getElementById('second-info').style.display = 'none';
     }
 }
