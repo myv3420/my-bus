@@ -395,6 +395,63 @@
             text-overflow: ellipsis;
         }
         .btn.active { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+
+        /* ── QRコードモーダル ── */
+        .qr-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.7);
+            z-index: 500;
+            align-items: center;
+            justify-content: center;
+        }
+        .qr-overlay.open { display: flex; }
+        .qr-box {
+            background: var(--surface);
+            border-radius: 20px;
+            padding: 24px 20px;
+            width: min(320px, 85vw);
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .qr-box img {
+            width: 220px;
+            height: 220px;
+            background: #fff;
+            border-radius: 12px;
+            padding: 10px;
+            margin-bottom: 14px;
+        }
+        .qr-url {
+            font-size: 0.72rem;
+            color: var(--text);
+            opacity: 0.7;
+            word-break: break-all;
+            margin-bottom: 16px;
+        }
+        .qr-actions {
+            display: flex;
+            gap: 8px;
+        }
+        .qr-btn {
+            flex: 1;
+            padding: 10px;
+            border-radius: 10px;
+            border: 1px solid rgba(201,184,255,0.3);
+            background: var(--surface2);
+            color: var(--text);
+            font-family: inherit;
+            font-size: 0.8rem;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .qr-close {
+            margin-top: 12px;
+            font-size: 0.75rem;
+            opacity: 0.5;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -445,6 +502,13 @@
     </div>
 
     <div class="drawer-section">
+        <div class="drawer-item" onclick="openQRModal()">
+            <div class="drawer-icon">📱</div>
+            <div>
+                <div class="drawer-label">QRコードを表示して共有</div>
+                <div class="drawer-sub">このアプリのURLをQRコードで共有</div>
+            </div>
+        </div>
         <div class="drawer-item" onclick="startEditMode()">
             <div class="drawer-icon">✏️</div>
             <div>
@@ -485,6 +549,19 @@
 
 <!-- トースト -->
 <div class="toast" id="toast"></div>
+
+<!-- QRコードモーダル -->
+<div class="qr-overlay" id="qr-overlay" onclick="if(event.target===this) closeQRModal()">
+    <div class="qr-box">
+        <img id="qr-img" src="" alt="QRコード">
+        <div class="qr-url" id="qr-url"></div>
+        <div class="qr-actions">
+            <button class="qr-btn" onclick="shareURL()">📤 共有</button>
+            <button class="qr-btn" onclick="copyURL()">📋 URLをコピー</button>
+        </div>
+        <div class="qr-close" onclick="closeQRModal()">閉じる</div>
+    </div>
+</div>
 
 <div class="footer-nav">
     <button id="btn-slot0" class="btn active" onclick="setStation(slotConfig[0])">厚板事務所前</button>
@@ -931,6 +1008,36 @@ function startEditMode() {
     isEditMode = true;
     selectedBus = null;
     update();
+}
+
+// ==================== QRコード共有 ====================
+function openQRModal() {
+    closeDrawer();
+    const url = location.href;
+    document.getElementById('qr-img').src = './QR_240430.png';
+    document.getElementById('qr-url').innerText = url;
+    document.getElementById('qr-overlay').classList.add('open');
+}
+function closeQRModal() {
+    document.getElementById('qr-overlay').classList.remove('open');
+}
+function shareURL() {
+    const url = location.href;
+    if (navigator.share) {
+        navigator.share({ title: 'バス時刻表', url }).catch(() => {});
+    } else {
+        copyURL();
+    }
+}
+function copyURL() {
+    const url = location.href;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url)
+            .then(() => showToast('📋 URLをコピーしました', 'ok'))
+            .catch(() => showToast('❌ コピーに失敗しました', 'ng'));
+    } else {
+        showToast('❌ コピーに対応していません', 'ng');
+    }
 }
 
 // ==================== CSVエクスポート ====================
