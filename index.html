@@ -458,7 +458,7 @@
 
 <div class="card">
     <div class="station-row">
-        <div class="station-name" id="st-display">厚板事務所前</div>
+        <div class="station-name" id="st-display">製鋼厚板事務所前</div>
         <div class="edit-gear" id="edit-gear" onclick="openDrawer()">⚙️</div>
     </div>
     <div class="day-badge" id="day-badge">判定中...</div>
@@ -564,23 +564,28 @@
 </div>
 
 <div class="footer-nav">
-    <button id="btn-slot0" class="btn active" onclick="setStation(slotConfig[0])">厚板事務所前</button>
+    <button id="btn-slot0" class="btn active" onclick="setStation(slotConfig[0])">製鋼厚板事務所前</button>
     <button id="btn-slot1" class="btn" onclick="setStation(slotConfig[1])">渡田西門前</button>
 </div>
 
 <script>
 // ==================== バス停マスター ====================
 const STATION_NAMES = {
-    atsu:  '厚板事務所前',
+    atsu:  '製鋼厚板事務所前',
     wada:  '渡田西門前',
-    ikeg:  '池上正門'
+    ikeg:  '池上正門',
+    ougi:  '扇島正門前'
 };
 
-// ==================== 所要時間設定（渡田西門前 → 厚板事務所前） ====================
-// 北周り・南周りそれぞれの所要時間（分）
-const TRAVEL_TIME = { 北: 27, 南: 18 };
-const ARRIVAL_ORIGIN = 'wada';   // この停留所を表示中のときだけ到着予定を出す
+// ==================== 到着予定設定（各停留所 → 製鋼厚板事務所前） ====================
+// origin ごとに、そのバス（route・給油有無）から所要時間(分)を返す関数を定義
 const ARRIVAL_TARGET = 'atsu';   // 到着先の停留所
+const ARRIVAL_CONFIG = {
+    wada: (bus) => ({ 北: 27, 南: 18 }[bus.r]),
+    ikeg: (bus) => ({ 北: 21, 南: 12 }[bus.r]),
+    // 扇島正門前：南回りは常に10分。北回りは19分（給油ありの便は28分）
+    ougi: (bus) => (bus.r === '南' ? 10 : (bus.f ? 28 : 19))
+};
 
 // ==================== デフォルトデータ ====================
 const DEFAULT_DATA = {
@@ -702,6 +707,46 @@ const DEFAULT_DATA = {
             {h:21,m:22,r:"北"},{h:21,m:40,r:"北"},
             {h:22,m:1,r:"北"}
         ]
+    },
+    ougi: {
+        h: [
+            {h:6,m:22,r:"南"},{h:6,m:22,r:"北"},{h:6,m:24,r:"南"},{h:6,m:24,r:"北"},{h:6,m:38,r:"南"},{h:6,m:38,r:"北"},{h:6,m:44,r:"南"},{h:6,m:44,r:"北"},{h:6,m:58,r:"北"},
+            {h:7,m:8,r:"南"},{h:7,m:8,r:"北"},{h:7,m:10,r:"北"},{h:7,m:16,r:"北"},{h:7,m:24,r:"南"},{h:7,m:24,r:"北"},{h:7,m:38,r:"南"},{h:7,m:38,r:"北"},{h:7,m:52,r:"南"},{h:7,m:52,r:"北"},
+            {h:8,m:6,r:"南"},{h:8,m:6,r:"北"},{h:8,m:18,r:"北"},{h:8,m:43,r:"北",f:true},{h:8,m:59,r:"北",f:true},
+            {h:9,m:38,r:"北",f:true},
+            {h:10,m:19,r:"北",f:true},
+            {h:11,m:38,r:"北"},
+            {h:12,m:28,r:"北"},{h:12,m:56,r:"北",f:true},
+            {h:13,m:46,r:"北"},
+            {h:14,m:16,r:"北",f:true},{h:14,m:38,r:"北"},{h:14,m:58,r:"北"},
+            {h:15,m:25,r:"北"},{h:15,m:40,r:"北"},{h:15,m:48,r:"南"},{h:15,m:58,r:"南"},
+            {h:16,m:8,r:"南"},{h:16,m:20,r:"南"},{h:16,m:36,r:"南"},{h:16,m:43,r:"南"},{h:16,m:58,r:"南"},
+            {h:17,m:2,r:"南"},{h:17,m:9,r:"南"},{h:17,m:25,r:"南"},{h:17,m:33,r:"南"},{h:17,m:53,r:"南"},
+            {h:18,m:13,r:"南"},{h:18,m:28,r:"南"},{h:18,m:43,r:"南"},{h:18,m:58,r:"南"},
+            {h:19,m:7,r:"北"},{h:19,m:23,r:"南"},{h:19,m:28,r:"北"},{h:19,m:53,r:"南"},{h:19,m:56,r:"北"},
+            {h:20,m:18,r:"南"},{h:20,m:50,r:"南"},
+            {h:21,m:3,r:"南"},{h:21,m:33,r:"南"},{h:21,m:46,r:"南"},
+            {h:22,m:8,r:"南"}
+        ],
+        k: [
+            {h:6,m:22,r:"南"},{h:6,m:22,r:"北"},{h:6,m:38,r:"南"},{h:6,m:47,r:"北"},
+            {h:7,m:9,r:"南"},{h:7,m:23,r:"南"},{h:7,m:37,r:"南"},{h:7,m:50,r:"南"},
+            {h:8,m:12,r:"南"},{h:8,m:53,r:"北"},
+            {h:9,m:20,r:"北"},{h:9,m:38,r:"北"},
+            {h:10,m:14,r:"北",f:true},{h:10,m:56,r:"北",f:true},
+            {h:11,m:38,r:"北",f:true},
+            {h:12,m:23,r:"南"},{h:12,m:58,r:"南"},
+            {h:13,m:38,r:"南"},{h:13,m:38,r:"北"},
+            {h:14,m:19,r:"南"},{h:14,m:48,r:"北"},
+            {h:15,m:23,r:"北"},{h:15,m:56,r:"北"},
+            {h:16,m:18,r:"北"},{h:16,m:43,r:"北"},
+            {h:17,m:6,r:"北"},{h:17,m:28,r:"北"},{h:17,m:48,r:"北"},
+            {h:18,m:23,r:"北"},{h:18,m:39,r:"北"},{h:18,m:53,r:"北"},
+            {h:19,m:20,r:"北"},{h:19,m:43,r:"北"},{h:19,m:55,r:"北"},
+            {h:20,m:27,r:"南"},{h:20,m:50,r:"南"},
+            {h:21,m:24,r:"北"},{h:21,m:42,r:"北"},
+            {h:22,m:3,r:"北"}
+        ]
     }
 };
 
@@ -714,9 +759,15 @@ if (!localStorage.getItem(VER_KEY)) {
     localStorage.setItem(VER_KEY, 'true');
 } else {
     db = JSON.parse(localStorage.getItem('bus_db_v2') || JSON.stringify(DEFAULT_DATA));
-    // 池上正門データが古いDBに無い場合は補完
-    if (!db.ikeg) {
-        db.ikeg = JSON.parse(JSON.stringify(DEFAULT_DATA.ikeg));
+    // 新しい停留所データが古いDBに無い場合は補完
+    let dbUpdated = false;
+    Object.keys(DEFAULT_DATA).forEach(stId => {
+        if (!db[stId]) {
+            db[stId] = JSON.parse(JSON.stringify(DEFAULT_DATA[stId]));
+            dbUpdated = true;
+        }
+    });
+    if (dbUpdated) {
         localStorage.setItem('bus_db_v2', JSON.stringify(db));
     }
 }
@@ -893,10 +944,12 @@ function update() {
             countEl.style.display = 'none';
         }
 
-        // 渡田西門前 表示時のみ、厚板事務所前への到着予定を表示
+        // 到着予定を計算できる停留所を表示中なら、厚板事務所前への到着予定を表示
         const arrivalEl = document.getElementById('arrival-info');
-        if (currentSt === ARRIVAL_ORIGIN && TRAVEL_TIME[displayBus.r] != null) {
-            const arrivalTime = addMinutes(displayBus.h, displayBus.m, TRAVEL_TIME[displayBus.r]);
+        const arrivalFn = ARRIVAL_CONFIG[currentSt];
+        const travelMin = arrivalFn ? arrivalFn(displayBus) : null;
+        if (travelMin != null) {
+            const arrivalTime = addMinutes(displayBus.h, displayBus.m, travelMin);
             arrivalEl.innerText = `🚏 ${STATION_NAMES[ARRIVAL_TARGET]} 着 ${arrivalTime} 頃`;
             arrivalEl.style.display = 'block';
         } else {
