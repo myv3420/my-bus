@@ -384,14 +384,14 @@
         }
         .btn {
             flex: 1;
-            padding: 11px 6px;
+            padding: 12px 4px;
             border-radius: 12px;
             border: 1px solid rgba(201,184,255,0.3);
             font-weight: bold;
             background: var(--surface2);
             color: var(--text);
             font-family: inherit;
-            font-size: 0.78rem;
+            font-size: 0.92rem; /* ★文字サイズを大きく修正しました */
             cursor: pointer;
             white-space: nowrap;
             overflow: hidden;
@@ -581,12 +581,10 @@ const STATION_NAMES = {
 };
 
 // ==================== 到着予定設定（各停留所 → 製鋼厚板事務所前） ====================
-// origin ごとに、そのバス（route・給油有無）から所要時間(分)を返す関数を定義
 const ARRIVAL_TARGET = 'atsu';   // 到着先の停留所
 const ARRIVAL_CONFIG = {
     wada: (bus) => ({ 北: 27, 南: 18 }[bus.r]),
     ikeg: (bus) => ({ 北: 21, 南: 12 }[bus.r]),
-    // 扇島正門前：南回りは常に10分。北回りは19分（給油ありの便は28分）
     ougi: (bus) => (bus.r === '南' ? 10 : (bus.f ? 28 : 19))
 };
 
@@ -762,7 +760,6 @@ if (!localStorage.getItem(VER_KEY)) {
     localStorage.setItem(VER_KEY, 'true');
 } else {
     db = JSON.parse(localStorage.getItem('bus_db_v2') || JSON.stringify(DEFAULT_DATA));
-    // 新しい停留所データが古いDBに無い場合は補完
     let dbUpdated = false;
     Object.keys(DEFAULT_DATA).forEach(stId => {
         if (!db[stId]) {
@@ -777,7 +774,6 @@ if (!localStorage.getItem(VER_KEY)) {
 
 // スロット設定（左右ボタン）
 let slotConfig = JSON.parse(localStorage.getItem('bus_slot_config') || '["atsu","wada"]');
-// 古いデータや存在しないキーのチェック
 slotConfig = slotConfig.map(s => STATION_NAMES[s] ? s : Object.keys(STATION_NAMES)[0]);
 
 let currentSt = slotConfig[0];
@@ -947,7 +943,6 @@ function update() {
             countEl.style.display = 'none';
         }
 
-        // 到着予定を計算できる停留所を表示中なら、厚板事務所前への到着予定を表示
         const arrivalEl = document.getElementById('arrival-info');
         const arrivalFn = ARRIVAL_CONFIG[currentSt];
         const travelMin = arrivalFn ? arrivalFn(displayBus) : null;
@@ -1038,7 +1033,6 @@ function applySlotConfig() {
     const rightVal = document.getElementById('slot-right-sel').value;
     slotConfig = [leftVal, rightVal];
     localStorage.setItem('bus_slot_config', JSON.stringify(slotConfig));
-    // 現在のバス停がスロットにない場合は左に合わせる
     if (currentSt !== leftVal && currentSt !== rightVal) {
         currentSt = leftVal;
         selectedBus = null;
