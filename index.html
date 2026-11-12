@@ -782,28 +782,71 @@ let isEditMode = false;
 let selectedBus = null;
 let initialScrollDone = false;
 
-// ==================== 祝日データ（オフライン内蔵・2025〜2027年） ====================
-const HOLIDAYS = {
-    "2025-01-01":"元日","2025-01-13":"成人の日","2025-02-11":"建国記念の日",
-    "2025-02-23":"天皇誕生日","2025-02-24":"天皇誕生日 振替休日","2025-03-20":"春分の日",
-    "2025-04-29":"昭和の日","2025-05-03":"憲法記念日","2025-05-04":"みどりの日",
-    "2025-05-05":"こどもの日","2025-05-06":"こどもの日 振替休日","2025-07-21":"海の日",
-    "2025-08-11":"山の日","2025-09-15":"敬老の日","2025-09-23":"秋分の日",
-    "2025-10-13":"スポーツの日","2025-11-03":"文化の日","2025-11-23":"勤労感謝の日",
-    "2025-11-24":"勤労感謝の日 振替休日",
-    "2026-01-01":"元日","2026-01-12":"成人の日","2026-02-11":"建国記念の日",
-    "2026-02-23":"天皇誕生日","2026-03-20":"春分の日","2026-04-29":"昭和の日",
-    "2026-05-03":"憲法記念日","2026-05-04":"みどりの日","2026-05-05":"こどもの日",
-    "2026-05-06":"こどもの日 振替休日","2026-07-20":"海の日","2026-08-11":"山の日",
-    "2026-09-21":"敬老の日","2026-09-22":"国民の休日","2026-09-23":"秋分の日",
-    "2026-10-12":"スポーツの日","2026-11-03":"文化の日","2026-11-23":"勤労感謝の日",
-    "2027-01-01":"元日","2027-01-11":"成人の日","2027-02-11":"建国記念の日",
-    "2027-02-23":"天皇誕生日","2027-03-21":"春分の日","2027-03-22":"春分の日 振替休日",
-    "2027-04-29":"昭和の日","2027-05-03":"憲法記念日","2027-05-04":"みどりの日",
-    "2027-05-05":"こどもの日","2027-07-19":"海の日","2027-08-11":"山の日",
-    "2027-09-20":"敬老の日","2027-09-23":"秋分の日","2027-10-11":"スポーツの日",
-    "2027-11-03":"文化の日","2027-11-23":"勤労感謝の日"
-};
+// ==================== 祝日データ（自動計算・オフライン対応） ====================
+// 固定日・ハッピーマンデー・春分/秋分をルールで算出し、振替休日と国民の休日も自動で付けます。
+const HOLIDAYS = (() => {
+    const map = {};
+    const fmt = (y, m, d) => `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    const nthMonday = (y, m, n) => {
+        const dow = new Date(y, m - 1, 1).getDay();
+        return 1 + ((8 - dow) % 7) + (n - 1) * 7;
+    };
+    const vernalDay = y => Math.floor(20.8431 + 0.242194 * (y - 1980)) - Math.floor((y - 1980) / 4);
+    const autumnalDay = y => Math.floor(23.2488 + 0.242194 * (y - 1980)) - Math.floor((y - 1980) / 4);
+    for (let y = 2020; y <= 2099; y++) {
+        const base = [];
+        const add = (m, d, name) => base.push([fmt(y, m, d), name]);
+        add(1, 1, '元日');
+        add(1, nthMonday(y, 1, 2), '成人の日');
+        add(2, 11, '建国記念の日');
+        add(2, 23, '天皇誕生日');
+        add(3, vernalDay(y), '春分の日');
+        add(4, 29, '昭和の日');
+        add(5, 3, '憲法記念日');
+        add(5, 4, 'みどりの日');
+        add(5, 5, 'こどもの日');
+        add(7, nthMonday(y, 7, 3), '海の日');
+        add(8, 11, '山の日');
+        add(9, nthMonday(y, 9, 3), '敬老の日');
+        add(9, autumnalDay(y), '秋分の日');
+        add(10, nthMonday(y, 10, 2), 'スポーツの日');
+        add(11, 3, '文化の日');
+        add(11, 23, '勤労感謝の日');
+        base.sort((a, b) => a[0] < b[0] ? -1 : 1);
+        for (const [ds, name] of base) map[ds] = name;
+        // 振替休日：祝日が日曜なら、直後の「祝日でない日」を振替にする
+        for (const [ds, name] of base) {
+            const [yy, mm, dd] = ds.split('-').map(Number);
+            const dt = new Date(yy, mm - 1, dd);
+            if (dt.getDay() === 0) {
+                const sub = new Date(dt);
+                do { sub.setDate(sub.getDate() + 1); }
+                while (map[fmt(sub.getFullYear(), sub.getMonth() + 1, sub.getDate())]);
+                map[fmt(sub.getFullYear(), sub.getMonth() + 1, sub.getDate())] = `${name} 振替休日`;
+            }
+        }
+    }
+    // 国民の休日：平日が前後の祝日に挟まれたら休日
+    for (let y = 2020; y <= 2099; y++) {
+        for (let m = 1; m <= 12; m++) {
+            const last = new Date(y, m, 0).getDate();
+            for (let d = 1; d <= last; d++) {
+                const ds = fmt(y, m, d);
+                if (map[ds]) continue;
+                const dt = new Date(y, m - 1, d);
+                const dow = dt.getDay();
+                if (dow === 0 || dow === 6) continue;
+                const prev = new Date(dt); prev.setDate(prev.getDate() - 1);
+                const next = new Date(dt); next.setDate(next.getDate() + 1);
+                if (map[fmt(prev.getFullYear(), prev.getMonth() + 1, prev.getDate())] &&
+                    map[fmt(next.getFullYear(), next.getMonth() + 1, next.getDate())]) {
+                    map[ds] = '国民の休日';
+                }
+            }
+        }
+    }
+    return map;
+})();
 
 // ==================== 祝日判定 ====================
 function checkHoliday() {
